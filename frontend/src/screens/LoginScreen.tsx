@@ -1,23 +1,38 @@
+import { useState } from "react";
+import { login } from "@/src/services/authService";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
 import { router } from "expo-router";
 
+
 export default function LoginScreen() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  async function handleLogin() {
+    try {
+      const user = await login(email, password);
+      console.log(user);
+      router.push("/home");
+    } catch (error) {
+      console.log("Erro no login", error);
+    }
+  }
+  
   return (
     <View style={styles.container}>
       <Text style={styles.logo}>CHUTE ⚽</Text>
 
       <TextInput
-        placeholder="Email"
-        placeholderTextColor="#888"
-        style={styles.input}
-      />
+  placeholder="Email"
+  value={email}
+  onChangeText={setEmail}
+/>
 
-      <TextInput
-        placeholder="Senha"
-        placeholderTextColor="#888"
-        secureTextEntry
-        style={styles.input}
-      />
+<TextInput
+  placeholder="Senha"
+  value={password}
+  onChangeText={setPassword}
+/>
 
       <TouchableOpacity style={styles.button} onPress={() => router.push("/home")}>
         <Text style={styles.buttonText}>Entrar</Text>
@@ -29,6 +44,7 @@ export default function LoginScreen() {
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
