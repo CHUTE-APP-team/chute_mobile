@@ -1,8 +1,18 @@
 import { useState } from "react";
 import { useAuth } from "@/src/context/AuthContext";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+} from "react-native";
 import { router } from "expo-router";
 import axios from "axios";
+import { colors } from "../theme/colors";
+
+const theme = colors;
 
 export default function LoginScreen() {
   const { login } = useAuth();
@@ -35,10 +45,11 @@ export default function LoginScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.logo}>CHUTE ⚽</Text>
+      <Text style={styles.subtitle}>Bem-vindo de volta</Text>
 
       <TextInput
         placeholder="Email"
-        placeholderTextColor="#888"
+        placeholderTextColor={theme.textMuted}
         value={email}
         onChangeText={setEmail}
         style={styles.input}
@@ -48,7 +59,7 @@ export default function LoginScreen() {
 
       <TextInput
         placeholder="Senha"
-        placeholderTextColor="#888"
+        placeholderTextColor={theme.textMuted}
         value={password}
         onChangeText={setPassword}
         secureTextEntry
@@ -63,14 +74,14 @@ export default function LoginScreen() {
         disabled={isLoading}
       >
         {isLoading ? (
-          <ActivityIndicator color="#fff" />
+          <ActivityIndicator color={theme.textOnPrimary} />
         ) : (
           <Text style={styles.buttonText}>Entrar</Text>
         )}
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => router.push("/register")}>
-        <Text style={styles.register}>Criar conta</Text>
+        <Text style={styles.registerLink}>Criar conta</Text>
       </TouchableOpacity>
     </View>
   );
@@ -79,46 +90,58 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#121212",
+    backgroundColor: theme.background,
     justifyContent: "center",
     padding: 24,
   },
   logo: {
     fontSize: 40,
     fontWeight: "bold",
-    color: "#fff",
+    color: theme.primary,
     textAlign: "center",
-    marginBottom: 40,
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 15,
+    color: theme.textSecondary,
+    textAlign: "center",
+    marginBottom: 36,
   },
   input: {
-    backgroundColor: "#1E1E1E",
-    color: "#fff",
+    backgroundColor: theme.card,
+    color: theme.text,
     padding: 14,
-    borderRadius: 8,
-    marginBottom: 16,
+    paddingHorizontal: 18,
+    borderRadius: 50,
+    borderWidth: 1.5,
+    borderColor: theme.borderWarm,
+    marginBottom: 14,
+    fontSize: 15,
   },
   button: {
-    backgroundColor: "#ff9900",
+    backgroundColor: theme.primary,
     padding: 16,
-    borderRadius: 8,
+    borderRadius: 50,
     alignItems: "center",
+    marginBottom: 16,
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   buttonText: {
     fontWeight: "bold",
-    color: "#fff",
+    color: theme.textOnPrimary,
     fontSize: 16,
   },
-  register: {
-    color: "#aaa",
+  registerLink: {
+    color: theme.primary,
     textAlign: "center",
-    marginTop: 20,
+    fontWeight: "600",
   },
   error: {
-    color: "#ff4444",
+    color: theme.error,
     marginBottom: 12,
     textAlign: "center",
+    fontSize: 13,
   },
 });

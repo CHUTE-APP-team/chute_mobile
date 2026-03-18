@@ -12,6 +12,9 @@ import {
 import { router } from "expo-router";
 import axios from "axios";
 import { ALL_ROLES, UserRole } from "@/src/utils/roleUtils";
+import { colors } from "../theme/colors";
+
+const theme = colors;
 
 export default function RegisterScreen() {
   const { register } = useAuth();
@@ -53,7 +56,7 @@ export default function RegisterScreen() {
 
       <TextInput
         placeholder="Nome"
-        placeholderTextColor="#999"
+        placeholderTextColor={theme.textMuted}
         value={name}
         onChangeText={setName}
         style={styles.input}
@@ -62,7 +65,7 @@ export default function RegisterScreen() {
 
       <TextInput
         placeholder="Email"
-        placeholderTextColor="#999"
+        placeholderTextColor={theme.textMuted}
         value={email}
         onChangeText={setEmail}
         style={styles.input}
@@ -72,7 +75,7 @@ export default function RegisterScreen() {
 
       <TextInput
         placeholder="Senha"
-        placeholderTextColor="#999"
+        placeholderTextColor={theme.textMuted}
         value={password}
         onChangeText={setPassword}
         secureTextEntry
@@ -106,7 +109,7 @@ export default function RegisterScreen() {
         disabled={isLoading}
       >
         {isLoading ? (
-          <ActivityIndicator color="#fff" />
+          <ActivityIndicator color={theme.textOnPrimary} />
         ) : (
           <Text style={styles.buttonText}>Criar conta</Text>
         )}
@@ -122,7 +125,7 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: "#FFF3E6",
+    backgroundColor: theme.background,
     justifyContent: "center",
     padding: 24,
     paddingBottom: 40,
@@ -130,30 +133,31 @@ const styles = StyleSheet.create({
   logo: {
     fontSize: 40,
     fontWeight: "bold",
-    color: "#FF6A00",
+    color: theme.primary,
     textAlign: "center",
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 16,
-    color: "#888",
+    color: theme.textSecondary,
     textAlign: "center",
     marginBottom: 28,
   },
   input: {
-    backgroundColor: "#fff",
-    color: "#1A1A1A",
+    backgroundColor: theme.card,
+    color: theme.text,
     padding: 14,
+    paddingHorizontal: 18,
     borderRadius: 50,
     marginBottom: 14,
-    borderWidth: 1,
-    borderColor: "#E8D5C4",
+    borderWidth: 1.5,
+    borderColor: theme.borderWarm,
     fontSize: 15,
   },
   roleLabel: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#555",
+    color: theme.textSecondary,
     marginBottom: 12,
     marginTop: 4,
   },
@@ -170,13 +174,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 50,
     borderWidth: 1.5,
-    borderColor: "#E8D5C4",
-    backgroundColor: "#fff",
+    borderColor: theme.borderWarm,
+    backgroundColor: theme.card,
     gap: 6,
   },
   roleChipSelected: {
-    backgroundColor: "#FF6A00",
-    borderColor: "#FF6A00",
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
   roleEmoji: {
     fontSize: 16,
@@ -184,13 +188,13 @@ const styles = StyleSheet.create({
   roleText: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#555",
+    color: theme.textSecondary,
   },
   roleTextSelected: {
-    color: "#fff",
+    color: theme.textOnPrimary,
   },
   button: {
-    backgroundColor: "#FF6A00",
+    backgroundColor: theme.primary,
     padding: 16,
     borderRadius: 50,
     alignItems: "center",
@@ -201,16 +205,16 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontWeight: "bold",
-    color: "#fff",
+    color: theme.textOnPrimary,
     fontSize: 16,
   },
   loginLink: {
-    color: "#FF6A00",
+    color: theme.primary,
     textAlign: "center",
     fontWeight: "600",
   },
   error: {
-    color: "#D32F2F",
+    color: theme.error,
     marginBottom: 12,
     textAlign: "center",
     fontSize: 13,
