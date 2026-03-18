@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes';
 import usersRoutes from './routes/usersRoutes';
+import matchRoutes from './routes/matchRoutes';
 import { loggerMiddleware } from './middlewares/loggerMiddleware';
 import { errorMiddleware } from './middlewares/errorMiddleware';
 
@@ -21,6 +22,7 @@ app.get('/health', (_req: Request, res: Response) => {
 
 app.use('/auth', authRoutes);
 app.use('/users', usersRoutes);
+app.use('/matches', matchRoutes);
 
 app.use(errorMiddleware);
 
