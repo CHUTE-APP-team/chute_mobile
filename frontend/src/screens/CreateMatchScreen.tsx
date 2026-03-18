@@ -10,6 +10,9 @@ import {
   Platform,
   ActivityIndicator,
 } from "react-native";
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
 import { router } from "expo-router";
 import axios from "axios";
 import { createMatch } from "../services/matchService";
@@ -20,34 +23,70 @@ const theme = colors;
 export default function CreateMatchScreen() {
   const [title, setTitle] = useState("");
   const [location, setLocation] = useState("");
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState<Date>(new Date());
   const [maxPlayers, setMaxPlayers] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Controls visibility of each picker step
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+
   const locationRef = useRef<TextInput>(null);
-  const dateRef = useRef<TextInput>(null);
   const maxPlayersRef = useRef<TextInput>(null);
+
+  // ─── Date picker handlers ─────────────────────────────────────────────────
+
+  function onDateChange(event: DateTimePickerEvent, selected?: Date) {
+    if (event.type === "dismissed") {
+      setShowDatePicker(false);
+      return;
+    }
+    if (selected) {
+      // Preserve existing time, update only the date part
+      const next = new Date(date);
+      next.setFullYear(selected.getFullYear(), selected.getMonth(), selected.getDate());
+      setDate(next);
+    }
+    setShowDatePicker(false);
+    // On Android, show time picker as a second step
+    if (Platform.OS === "android") setShowTimePicker(true);
+  }
+
+  function onTimeChange(event: DateTimePickerEvent, selected?: Date) {
+    if (event.type === "dismissed") {
+      setShowTimePicker(false);
+      return;
+    }
+    if (selected) {
+      const next = new Date(date);
+      next.setHours(selected.getHours(), selected.getMinutes(), 0, 0);
+      setDate(next);
+    }
+    setShowTimePicker(false);
+  }
+
+  // ─── Display helpers ──────────────────────────────────────────────────────
+
+  function formatDisplay(d: Date): string {
+    return d.toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
+  // ─── Validation & submit ──────────────────────────────────────────────────
 
   function validate(): string | null {
     if (!title.trim()) return "Informe o título da partida.";
     if (!location.trim()) return "Informe o local da partida.";
-    if (!date.trim()) return "Informe a data da partida.";
-    const parsed = new Date(date.trim());
-    if (isNaN(parsed.getTime())) return "Data inválida. Use o formato DD/MM/AAAA HH:MM.";
     const players = parseInt(maxPlayers, 10);
     if (!maxPlayers.trim() || isNaN(players) || players < 2)
       return "Número de jogadores deve ser pelo menos 2.";
     return null;
-  }
-
-  function parseDate(input: string): string {
-    const parts = input.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})$/);
-    if (parts) {
-      const [, dd, mm, yyyy, hh, min] = parts;
-      return new Date(`${yyyy}-${mm}-${dd}T${hh}:${min}:00`).toISOString();
-    }
-    return new Date(input.trim()).toISOString();
   }
 
   async function handleCreate() {
@@ -62,7 +101,7 @@ export default function CreateMatchScreen() {
       await createMatch({
         title: title.trim(),
         location: location.trim(),
-        date: parseDate(date),
+        date: date.toISOString(),
         maxPlayers: parseInt(maxPlayers, 10),
       });
       router.back();
@@ -93,6 +132,7 @@ export default function CreateMatchScreen() {
         <Text style={styles.heading}>Organizar Partida</Text>
         <Text style={styles.subheading}>Preencha os detalhes da partida</Text>
 
+        {/* Título */}
         <Text style={styles.label}>Título</Text>
         <TextInput
           style={styles.input}
@@ -105,6 +145,7 @@ export default function CreateMatchScreen() {
           onSubmitEditing={() => locationRef.current?.focus()}
         />
 
+        {/* Local */}
         <Text style={styles.label}>Local</Text>
         <TextInput
           ref={locationRef}
@@ -114,22 +155,64 @@ export default function CreateMatchScreen() {
           value={location}
           onChangeText={setLocation}
           returnKeyType="next"
-          onSubmitEditing={() => dateRef.current?.focus()}
-        />
-
-        <Text style={styles.label}>Data e hora</Text>
-        <TextInput
-          ref={dateRef}
-          style={styles.input}
-          placeholder="DD/MM/AAAA HH:MM"
-          placeholderTextColor={theme.textMuted}
-          value={date}
-          onChangeText={setDate}
-          keyboardType="numbers-and-punctuation"
-          returnKeyType="next"
           onSubmitEditing={() => maxPlayersRef.current?.focus()}
         />
 
+        {/* Data e hora — tap to open picker */}
+        <Text style={styles.label}>Data e hora</Text>
+        <TouchableOpacity
+          style={styles.dateButton}
+          onPress={() => setShowDatePicker(true)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.dateIcon}>📅</Text>
+          <Text style={styles.dateText}>{formatDisplay(date)}</Text>
+        </TouchableOpacity>
+
+        {/* iOS: inline date+time picker (spinner mode) */}
+        {Platform.OS === "ios" && showDatePicker && (
+          <View style={styles.iosPickerWrapper}>
+            <DateTimePicker
+              value={date}
+              mode="datetime"
+              display="spinner"
+              onChange={(e, d) => {
+                if (e.type !== "dismissed" && d) setDate(d);
+              }}
+              locale="pt-BR"
+              minimumDate={new Date()}
+              textColor={theme.text}
+            />
+            <TouchableOpacity
+              style={styles.iosPickerDone}
+              onPress={() => setShowDatePicker(false)}
+            >
+              <Text style={styles.iosPickerDoneText}>Confirmar</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Android: two-step modal (date first, then time) */}
+        {Platform.OS === "android" && showDatePicker && (
+          <DateTimePicker
+            value={date}
+            mode="date"
+            display="default"
+            onChange={onDateChange}
+            minimumDate={new Date()}
+          />
+        )}
+        {Platform.OS === "android" && showTimePicker && (
+          <DateTimePicker
+            value={date}
+            mode="time"
+            display="default"
+            onChange={onTimeChange}
+            is24Hour
+          />
+        )}
+
+        {/* Máximo de jogadores */}
         <Text style={styles.label}>Máximo de jogadores</Text>
         <TextInput
           ref={maxPlayersRef}
@@ -208,6 +291,47 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: theme.text,
     marginBottom: 18,
+  },
+  // Date picker trigger button — same visual weight as a text input
+  dateButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: theme.card,
+    borderWidth: 1.5,
+    borderColor: theme.primary,
+    borderRadius: 50,
+    padding: 14,
+    paddingHorizontal: 18,
+    marginBottom: 18,
+    gap: 10,
+  },
+  dateIcon: {
+    fontSize: 18,
+  },
+  dateText: {
+    fontSize: 15,
+    color: theme.text,
+    fontWeight: "500",
+  },
+  // iOS inline picker container
+  iosPickerWrapper: {
+    backgroundColor: theme.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.border,
+    marginBottom: 18,
+    overflow: "hidden",
+  },
+  iosPickerDone: {
+    borderTopWidth: 1,
+    borderTopColor: theme.border,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  iosPickerDoneText: {
+    color: theme.primary,
+    fontWeight: "700",
+    fontSize: 15,
   },
   button: {
     backgroundColor: theme.primary,
