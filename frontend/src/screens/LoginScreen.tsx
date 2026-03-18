@@ -1,19 +1,34 @@
 import { useState } from "react";
-import { login } from "@/src/services/authService";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
+import { useAuth } from "@/src/context/AuthContext";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
+import axios from "axios";
 
 export default function LoginScreen() {
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   async function handleLogin() {
+    if (!email.trim() || !password.trim()) {
+      setError("Preencha todos os campos.");
+      return;
+    }
+    setError(null);
+    setIsLoading(true);
     try {
-      const user = await login(email, password);
-      console.log(user);
-      router.push("/home");
-    } catch (error) {
-      console.log("Erro no login", error);
+      await login(email, password);
+      router.replace("/home");
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else {
+        setError("Erro ao fazer login. Tente novamente.");
+      }
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -27,6 +42,8 @@ export default function LoginScreen() {
         value={email}
         onChangeText={setEmail}
         style={styles.input}
+        keyboardType="email-address"
+        autoCapitalize="none"
       />
 
       <TextInput
@@ -38,8 +55,18 @@ export default function LoginScreen() {
         style={styles.input}
       />
 
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>Entrar</Text>
+      {error && <Text style={styles.error}>{error}</Text>}
+
+      <TouchableOpacity
+        style={[styles.button, isLoading && styles.buttonDisabled]}
+        onPress={handleLogin}
+        disabled={isLoading}
+      >
+        {isLoading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.buttonText}>Entrar</Text>
+        )}
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => router.push("/register")}>
@@ -76,6 +103,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
   },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
   buttonText: {
     fontWeight: "bold",
     color: "#fff",
@@ -85,5 +115,10 @@ const styles = StyleSheet.create({
     color: "#aaa",
     textAlign: "center",
     marginTop: 20,
+  },
+  error: {
+    color: "#ff4444",
+    marginBottom: 12,
+    textAlign: "center",
   },
 });
