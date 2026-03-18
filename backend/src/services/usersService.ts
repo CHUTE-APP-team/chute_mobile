@@ -1,10 +1,11 @@
-import User from '../models/User';
+import User, { UserRole } from '../models/User';
 import { AppError } from '../utils/AppError';
 
 export interface UserProfile {
   id: string;
   name: string;
   email: string;
+  role: UserRole;
 }
 
 export const getUserById = async (userId: string): Promise<UserProfile> => {
@@ -15,5 +16,6 @@ export const getUserById = async (userId: string): Promise<UserProfile> => {
     id: String(user._id),
     name: user.name,
     email: user.email,
+    role: user.role,
   };
 };

@@ -1,13 +1,14 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { router } from 'expo-router';
 import { login as loginService, logout as logoutService, register as registerService } from '../services/authService';
 import { getCurrentUser, UserProfile } from '../services/userService';
-import { getToken } from '../services/tokenService';
+import { getToken, removeToken } from '../services/tokenService';
 
 interface AuthContextData {
   user: UserProfile | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string, role?: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -25,7 +26,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const profile = await getCurrentUser();
           setUser(profile);
         }
-      } catch {
+      } catch (err) {
+        console.warn('[AuthContext] Failed to restore session, clearing token:', err);
+        await removeToken();
         setUser(null);
       } finally {
         setIsLoading(false);
@@ -40,8 +43,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(profile);
   }
 
-  async function register(name: string, email: string, password: string) {
-    await registerService(name, email, password);
+  async function register(name: string, email: string, password: string, role?: string) {
+    await registerService(name, email, password, role);
     const profile = await getCurrentUser();
     setUser(profile);
   }
@@ -49,6 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function logout() {
     await logoutService();
     setUser(null);
+    router.replace('/login');
   }
 
   return (

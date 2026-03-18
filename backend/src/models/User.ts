@@ -1,9 +1,13 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+export const USER_ROLES = ['player', 'host', 'referee', 'coach', 'scout', 'photographer'] as const;
+export type UserRole = typeof USER_ROLES[number];
+
 export interface IUser extends Document {
   name: string;
   email: string;
   password: string;
+  role: UserRole;
   createdAt: Date;
 }
 
@@ -27,6 +31,11 @@ const UserSchema: Schema = new Schema<IUser>(
       type: String,
       required: [true, 'Password is required'],
       minlength: [6, 'Password must be at least 6 characters'],
+    },
+    role: {
+      type: String,
+      enum: USER_ROLES,
+      default: 'player',
     },
   },
   {

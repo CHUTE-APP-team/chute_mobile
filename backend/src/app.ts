@@ -12,7 +12,7 @@ dotenv.config();
 const app: Application = express();
 
 app.use(loggerMiddleware);
-app.use(cors());
+app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'] }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

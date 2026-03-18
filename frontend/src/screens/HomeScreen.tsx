@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { useAuth } from "../context/AuthContext";
 import { getMatches, joinMatch, Match } from "../services/matchService";
+import { getRoleGreeting } from "../utils/roleUtils";
 import axios from "axios";
 
 export default function HomeScreen() {
@@ -72,7 +73,8 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Bem-vindo, {user?.name ?? "jogador"} ⚽</Text>
+      <Text style={styles.title}>{user ? getRoleGreeting(user.role) : "Olá ⚽"}</Text>
+      <Text style={styles.userName}>{user?.name}</Text>
 
       {isLoading ? (
         <ActivityIndicator color="#ff9900" size="large" style={styles.loader} />
@@ -138,6 +140,11 @@ const styles = StyleSheet.create({
     fontSize: 22,
     color: "#fff",
     fontWeight: "bold",
+    marginBottom: 2,
+  },
+  userName: {
+    fontSize: 14,
+    color: "#aaa",
     marginBottom: 20,
   },
   loader: {

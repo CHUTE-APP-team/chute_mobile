@@ -8,8 +8,8 @@ export const register = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { name, email, password } = req.body;
-    const payload = await registerUser(name, email, password);
+    const { name, email, password, role } = req.body;
+    const payload = await registerUser(name, email, password, role);
     sendSuccess(res, 'User registered successfully', payload, 201);
   } catch (err) {
     next(err);

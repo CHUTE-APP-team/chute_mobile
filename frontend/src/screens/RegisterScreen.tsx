@@ -1,14 +1,24 @@
 import { useState } from "react";
 import { useAuth } from "@/src/context/AuthContext";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  ScrollView,
+} from "react-native";
 import { router } from "expo-router";
 import axios from "axios";
+import { ALL_ROLES, UserRole } from "@/src/utils/roleUtils";
 
 export default function RegisterScreen() {
   const { register } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState<UserRole>("player");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -20,7 +30,7 @@ export default function RegisterScreen() {
     setError(null);
     setIsLoading(true);
     try {
-      await register(name, email, password);
+      await register(name, email, password, role);
       router.replace("/home");
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.data?.message) {
@@ -34,12 +44,16 @@ export default function RegisterScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+    >
       <Text style={styles.logo}>CHUTE ⚽</Text>
+      <Text style={styles.subtitle}>Crie sua conta</Text>
 
       <TextInput
         placeholder="Nome"
-        placeholderTextColor="#888"
+        placeholderTextColor="#999"
         value={name}
         onChangeText={setName}
         style={styles.input}
@@ -48,7 +62,7 @@ export default function RegisterScreen() {
 
       <TextInput
         placeholder="Email"
-        placeholderTextColor="#888"
+        placeholderTextColor="#999"
         value={email}
         onChangeText={setEmail}
         style={styles.input}
@@ -58,12 +72,31 @@ export default function RegisterScreen() {
 
       <TextInput
         placeholder="Senha"
-        placeholderTextColor="#888"
+        placeholderTextColor="#999"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
         style={styles.input}
       />
+
+      <Text style={styles.roleLabel}>Qual é o seu perfil?</Text>
+      <View style={styles.roleGrid}>
+        {ALL_ROLES.map((r) => {
+          const selected = role === r.value;
+          return (
+            <TouchableOpacity
+              key={r.value}
+              style={[styles.roleChip, selected && styles.roleChipSelected]}
+              onPress={() => setRole(r.value)}
+            >
+              <Text style={styles.roleEmoji}>{r.emoji}</Text>
+              <Text style={[styles.roleText, selected && styles.roleTextSelected]}>
+                {r.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
 
       {error && <Text style={styles.error}>{error}</Text>}
 
@@ -80,38 +113,88 @@ export default function RegisterScreen() {
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => router.push("/login")}>
-        <Text style={styles.login}>Já tenho uma conta</Text>
+        <Text style={styles.loginLink}>Já tenho uma conta</Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: "#121212",
+    flexGrow: 1,
+    backgroundColor: "#FFF3E6",
     justifyContent: "center",
     padding: 24,
+    paddingBottom: 40,
   },
   logo: {
     fontSize: 40,
     fontWeight: "bold",
-    color: "#fff",
+    color: "#FF6A00",
     textAlign: "center",
-    marginBottom: 40,
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: "#888",
+    textAlign: "center",
+    marginBottom: 28,
   },
   input: {
-    backgroundColor: "#1E1E1E",
-    color: "#fff",
+    backgroundColor: "#fff",
+    color: "#1A1A1A",
     padding: 14,
-    borderRadius: 8,
-    marginBottom: 16,
+    borderRadius: 50,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: "#E8D5C4",
+    fontSize: 15,
+  },
+  roleLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#555",
+    marginBottom: 12,
+    marginTop: 4,
+  },
+  roleGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginBottom: 20,
+  },
+  roleChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 50,
+    borderWidth: 1.5,
+    borderColor: "#E8D5C4",
+    backgroundColor: "#fff",
+    gap: 6,
+  },
+  roleChipSelected: {
+    backgroundColor: "#FF6A00",
+    borderColor: "#FF6A00",
+  },
+  roleEmoji: {
+    fontSize: 16,
+  },
+  roleText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#555",
+  },
+  roleTextSelected: {
+    color: "#fff",
   },
   button: {
-    backgroundColor: "#ff9900",
+    backgroundColor: "#FF6A00",
     padding: 16,
-    borderRadius: 8,
+    borderRadius: 50,
     alignItems: "center",
+    marginBottom: 16,
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -121,14 +204,15 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
   },
-  login: {
-    color: "#aaa",
+  loginLink: {
+    color: "#FF6A00",
     textAlign: "center",
-    marginTop: 20,
+    fontWeight: "600",
   },
   error: {
-    color: "#ff4444",
+    color: "#D32F2F",
     marginBottom: 12,
     textAlign: "center",
+    fontSize: 13,
   },
 });

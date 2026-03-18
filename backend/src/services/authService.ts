@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import User, { IUser } from '../models/User';
+import User, { IUser, UserRole } from '../models/User';
 import { AppError } from '../utils/AppError';
 
 export interface AuthPayload {
@@ -9,6 +9,7 @@ export interface AuthPayload {
     id: string;
     name: string;
     email: string;
+    role: UserRole;
     createdAt: Date;
   };
 }
@@ -26,19 +27,21 @@ const formatUser = (user: IUser): AuthPayload['user'] => ({
   id: String(user._id),
   name: user.name,
   email: user.email,
+  role: user.role,
   createdAt: user.createdAt,
 });
 
 export const registerUser = async (
   name: string,
   email: string,
-  password: string
+  password: string,
+  role: UserRole = 'player'
 ): Promise<AuthPayload> => {
   const existing = await User.findOne({ email });
   if (existing) throw new AppError('Email already in use', 409);
 
   const hashedPassword = await bcrypt.hash(password, 12);
-  const user = await User.create({ name, email, password: hashedPassword });
+  const user = await User.create({ name, email, password: hashedPassword, role });
 
   return { token: generateToken(String(user._id)), user: formatUser(user) };
 };
