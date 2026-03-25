@@ -43,8 +43,9 @@ export default function MatchCard({ match, userId, isJoining, onJoin }: Props) {
       onPress={() => router.push(`/match/${match._id}` as any)}
       activeOpacity={0.88}
     >
-      {/* Header row: title + status badge */}
+      {/* Header row: ball icon + title + status badge */}
       <View style={styles.headerRow}>
+        <Text style={styles.cardIcon}>⚽</Text>
         <Text style={styles.title} numberOfLines={1}>{match.title}</Text>
         <View style={[styles.badge, isFull ? styles.badgeFull : styles.badgeOpen]}>
           <Text style={[styles.badgeText, isFull ? styles.badgeTextFull : styles.badgeTextOpen]}>
@@ -125,8 +126,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 12,
     gap: 8,
+  },
+  cardIcon: {
+    fontSize: 18,
   },
   title: {
     flex: 1,

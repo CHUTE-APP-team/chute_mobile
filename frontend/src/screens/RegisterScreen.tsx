@@ -13,6 +13,7 @@ import { router } from "expo-router";
 import axios from "axios";
 import { ALL_ROLES, UserRole } from "@/src/utils/roleUtils";
 import { colors } from "../theme/colors";
+import Logo from "../components/Logo";
 
 const theme = colors;
 
@@ -51,7 +52,9 @@ export default function RegisterScreen() {
       contentContainerStyle={styles.container}
       keyboardShouldPersistTaps="handled"
     >
-      <Text style={styles.logo}>CHUTE ⚽</Text>
+      <View style={styles.logoContainer}>
+        <Logo size="large" />
+      </View>
       <Text style={styles.subtitle}>Crie sua conta</Text>
 
       <TextInput
@@ -130,12 +133,9 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingBottom: 40,
   },
-  logo: {
-    fontSize: 40,
-    fontWeight: "bold",
-    color: theme.primary,
-    textAlign: "center",
-    marginBottom: 4,
+  logoContainer: {
+    alignItems: "center",
+    marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,

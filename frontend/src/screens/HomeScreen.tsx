@@ -13,9 +13,9 @@ import { router } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "../context/AuthContext";
 import { getMatches, joinMatch, Match } from "../services/matchService";
-import { getRoleGreeting } from "../utils/roleUtils";
 import { colors } from "../theme/colors";
 import MatchCard from "../components/MatchCard";
+import Logo from "../components/Logo";
 import axios from "axios";
 
 const theme = colors;
@@ -80,12 +80,7 @@ export default function HomeScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>
-            {user ? getRoleGreeting(user.role) : "Olá ⚽"}
-          </Text>
-          <Text style={styles.userName}>{user?.name}</Text>
-        </View>
+        <Logo size="small" />
         <TouchableOpacity
           style={styles.createButton}
           onPress={() => router.push("/create-match")}
@@ -94,6 +89,11 @@ export default function HomeScreen() {
           <Text style={styles.createButtonText}>+ Organizar</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Greeting */}
+      <Text style={styles.greeting}>
+        {user?.name ? `Olá, ${user.name} 👋` : "Olá ⚽"}
+      </Text>
 
       <Text style={styles.sectionLabel}>Partidas disponíveis</Text>
 
@@ -120,10 +120,16 @@ export default function HomeScreen() {
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>⚽</Text>
-              <Text style={styles.emptyTitle}>Nenhuma partida disponível</Text>
+              {/* Swap the emoji block below for an Image when player.png is available:
+                  <Image source={require("../../assets/images/player.png")}
+                    style={styles.playerImage} resizeMode="contain" /> */}
+              <View style={styles.playerIllustration}>
+                <Text style={styles.playerEmoji}>🧍</Text>
+                <Text style={styles.ballEmoji}>⚽</Text>
+              </View>
+              <Text style={styles.emptyTitle}>Nenhuma partida ainda</Text>
               <Text style={styles.emptySubtitle}>
-                Que tal organizar uma agora?
+                Crie ou entre na próxima pelada ⚽
               </Text>
               <TouchableOpacity
                 style={styles.emptyButton}
@@ -160,17 +166,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 16,
   },
   greeting: {
-    fontSize: 22,
+    fontSize: 18,
     color: theme.text,
-    fontWeight: "bold",
-    marginBottom: 2,
-  },
-  userName: {
-    fontSize: 14,
-    color: theme.textSecondary,
+    fontWeight: "600",
+    marginBottom: 16,
   },
   createButton: {
     backgroundColor: theme.primary,
@@ -206,22 +208,37 @@ const styles = StyleSheet.create({
   // ─── Empty state ─────────────────────────────────────────────────
   emptyContainer: {
     alignItems: "center",
-    marginTop: 60,
-    gap: 8,
+    marginTop: 48,
+    gap: 10,
   },
-  emptyIcon: {
-    fontSize: 48,
+  playerIllustration: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    marginBottom: 8,
+  },
+  playerEmoji: {
+    fontSize: 72,
+    lineHeight: 80,
+  },
+  ballEmoji: {
+    fontSize: 32,
+    lineHeight: 40,
+    marginLeft: -8,
     marginBottom: 4,
   },
+  // Uncomment when player.png is available:
+  // playerImage: { width: 160, height: 160, marginBottom: 8 },
   emptyTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: "700",
     color: theme.text,
+    textAlign: "center",
   },
   emptySubtitle: {
     fontSize: 14,
     color: theme.textSecondary,
     marginBottom: 8,
+    textAlign: "center",
   },
   emptyButton: {
     marginTop: 8,

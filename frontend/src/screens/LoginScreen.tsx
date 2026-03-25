@@ -11,6 +11,7 @@ import {
 import { router } from "expo-router";
 import axios from "axios";
 import { colors } from "../theme/colors";
+import Logo from "../components/Logo";
 
 const theme = colors;
 
@@ -44,7 +45,9 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.logo}>CHUTE ⚽</Text>
+      <View style={styles.logoContainer}>
+        <Logo size="large" />
+      </View>
       <Text style={styles.subtitle}>Bem-vindo de volta</Text>
 
       <TextInput
@@ -94,12 +97,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 24,
   },
-  logo: {
-    fontSize: 40,
-    fontWeight: "bold",
-    color: theme.primary,
-    textAlign: "center",
-    marginBottom: 4,
+  logoContainer: {
+    alignItems: "center",
+    marginBottom: 8,
   },
   subtitle: {
     fontSize: 15,
