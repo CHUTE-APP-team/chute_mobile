@@ -356,7 +356,7 @@ export default function HomeScreen() {
     fetchMatches(true);
   }
 
-  // ─── Join ──────────────────────────────────────────────────────────────────
+  // ─── Join (HeroCard — managed here) ──────────────────────────────────────
 
   async function handleJoin(matchId: string) {
     setJoiningId(matchId);
@@ -374,6 +374,14 @@ export default function HomeScreen() {
     } finally {
       setJoiningId(null);
     }
+  }
+
+  // ─── Join (MatchCard — self-managed, just sync master list) ──────────────
+
+  function handleMatchJoined(updated: Match) {
+    setMatches((prev) =>
+      prev.map((m) => (m._id === updated._id ? updated : m))
+    );
   }
 
   // ─── Derived lists ────────────────────────────────────────────────────────
@@ -488,8 +496,7 @@ export default function HomeScreen() {
                     <MatchCard
                       match={item}
                       userId={user?.id}
-                      isJoining={joiningId === item._id}
-                      onJoin={handleJoin}
+                      onJoin={handleMatchJoined}
                     />
                   </View>
                 )}
@@ -506,8 +513,7 @@ export default function HomeScreen() {
                   key={item._id}
                   match={item}
                   userId={user?.id}
-                  isJoining={joiningId === item._id}
-                  onJoin={handleJoin}
+                  onJoin={handleMatchJoined}
                 />
               ))}
             </View>
