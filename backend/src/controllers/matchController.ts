@@ -17,9 +17,14 @@ import { Response, NextFunction } from 'express';
 import { Types } from 'mongoose';
 import { AuthRequest } from '../middlewares/authMiddleware';
 import Match from '../models/Match';
+import User from '../models/User';
 import { AppError } from '../utils/AppError';
 import { sendSuccess } from '../utils/response';
 import { parseODataQuery } from '../utils/odataQueryParser';
+import { generateBalancedTeams, shouldAutoGenerateTeams } from '../services/matchService';
+import { buildPlayerResults, updatePlayerProgress, FinishMatchPayload } from '../services/progressionService';
+
+const MIN_PLAYERS_FOR_TEAMS = 4;
 
 // ─── Create Match ─────────────────────────────────────────────────────────────
 
@@ -56,18 +61,14 @@ export async function getMatches(
   try {
     const odata = parseODataQuery(req.query);
 
-    // Build base query with optional $filter
     let query = Match.find(odata.filter).sort({ date: 1 });
 
-    // $select — return only requested fields
     if (odata.select) query = query.select(odata.select);
 
-    // $expand — populate related documents
     for (const path of odata.expand) {
       query = query.populate(path, '-password');
     }
 
-    // $top / $skip — pagination
     if (odata.top  !== null) query = query.limit(odata.top);
     if (odata.skip !== null) query = query.skip(odata.skip);
 
@@ -92,10 +93,8 @@ export async function getMatch(
 
     let query = Match.findById(req.params.id);
 
-    // $select — return only requested fields
     if (odata.select) query = query.select(odata.select);
 
-    // $expand — populate related documents
     for (const path of odata.expand) {
       query = query.populate(path, '-password');
     }
@@ -129,11 +128,113 @@ export async function joinMatch(
     if (match.players.length >= match.maxPlayers) throw new AppError('Match is full', 400);
 
     match.players.push(new Types.ObjectId(userId));
+
+    // Auto-generate balanced teams when minimum player threshold is reached
+    if (shouldAutoGenerateTeams(match.players.length, MIN_PLAYERS_FOR_TEAMS)) {
+      const playersWithOverall = await User.find(
+        { _id: { $in: match.players } },
+        { _id: 1, overall: 1 }
+      ).lean();
+
+      const [teamA, teamB] = generateBalancedTeams(playersWithOverall as { _id: Types.ObjectId; overall: number }[]);
+      match.teams = [teamA, teamB];
+      match.teamsGeneratedAt = new Date();
+    }
+
     await match.save();
 
-    // Re-fetch with players populated so the client gets full player objects
-    const populated = await Match.findById(match._id).populate('players', 'name -password');
+    const populated = await Match.findById(match._id)
+      .populate('players', 'name overall -password')
+      .populate('teams.players', 'name overall -password');
+
     sendSuccess(res, 'Joined match', populated);
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── Generate Teams (manual) ──────────────────────────────────────────────────
+
+export async function generateMatchTeams(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const match = await Match.findById(req.params.id);
+
+    if (!match) throw new AppError('Match not found', 404);
+
+    if (match.createdBy.toString() !== req.userId) {
+      throw new AppError('Only the match owner can generate teams', 403);
+    }
+
+    if (match.players.length < MIN_PLAYERS_FOR_TEAMS) {
+      throw new AppError(
+        `At least ${MIN_PLAYERS_FOR_TEAMS} players are required to generate teams`,
+        400
+      );
+    }
+
+    const playersWithOverall = await User.find(
+      { _id: { $in: match.players } },
+      { _id: 1, overall: 1 }
+    ).lean();
+
+    const [teamA, teamB] = generateBalancedTeams(playersWithOverall as { _id: Types.ObjectId; overall: number }[]);
+    match.teams = [teamA, teamB];
+    match.teamsGeneratedAt = new Date();
+    await match.save();
+
+    const populated = await Match.findById(match._id)
+      .populate('teams.players', 'name overall -password');
+
+    sendSuccess(res, 'Times gerados com sucesso', { teams: populated!.teams });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── Finish Match ─────────────────────────────────────────────────────────────
+// PATCH /matches/:id/finish
+// Body: { winnerTeam, mvpPlayerId, playerNotes: { [userId]: notaFinal } }
+
+export async function finishMatch(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const match = await Match.findById(req.params.id);
+
+    if (!match) throw new AppError('Match not found', 404);
+
+    if (match.createdBy.toString() !== req.userId) {
+      throw new AppError('Only the match owner can finish the match', 403);
+    }
+
+    if (match.status === 'finished') {
+      throw new AppError('Match is already finished', 400);
+    }
+
+    const payload = req.body as FinishMatchPayload;
+
+    const results = buildPlayerResults(match, payload);
+
+    match.status        = 'finished';
+    match.winnerTeam    = payload.winnerTeam;
+    match.mvpPlayerId   = new Types.ObjectId(payload.mvpPlayerId);
+    match.playerResults = results;
+    match.finishedAt    = new Date();
+    await match.save();
+
+    await updatePlayerProgress(results);
+
+    sendSuccess(res, 'Partida finalizada', {
+      winnerTeam: match.winnerTeam,
+      mvpPlayerId: match.mvpPlayerId,
+      playerResults: match.playerResults,
+    });
   } catch (err) {
     next(err);
   }

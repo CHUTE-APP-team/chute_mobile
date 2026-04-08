@@ -12,11 +12,20 @@ import {
 import { useLocalSearchParams, router } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "../../src/context/AuthContext";
-import { getMatch, joinMatchDetail, MatchDetail } from "../../src/services/matchService";
+import {
+  getMatch,
+  joinMatchDetail,
+  generateTeams,
+  MatchDetail,
+  Team,
+} from "../../src/services/matchService";
 import { colors } from "../../src/theme/colors";
 import axios from "axios";
 
 const theme = colors;
+
+const TEAM_A_COLOR = "#1565C0"; // blue
+const TEAM_B_COLOR = "#2E7D32"; // green
 
 export default function MatchDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -24,6 +33,7 @@ export default function MatchDetailsScreen() {
   const [match, setMatch] = useState<MatchDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isJoining, setIsJoining] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -65,6 +75,23 @@ export default function MatchDetailsScreen() {
     }
   }
 
+  async function handleGenerateTeams() {
+    if (!match) return;
+    setIsGenerating(true);
+    try {
+      const teams = await generateTeams(match._id);
+      setMatch((prev) => prev ? { ...prev, teams, teamsGeneratedAt: new Date().toISOString() } : prev);
+    } catch (err) {
+      const message =
+        axios.isAxiosError(err) && err.response?.data?.message
+          ? err.response.data.message
+          : "Erro ao gerar times.";
+      Alert.alert("Erro", message);
+    } finally {
+      setIsGenerating(false);
+    }
+  }
+
   function formatDate(dateStr: string) {
     const d = new Date(dateStr);
     return d.toLocaleDateString("pt-BR", {
@@ -84,6 +111,11 @@ export default function MatchDetailsScreen() {
   function isFull() {
     if (!match) return false;
     return match.players.length >= match.maxPlayers;
+  }
+
+  function isOwner() {
+    if (!match || !user) return false;
+    return match.createdBy === user.id;
   }
 
   if (isLoading) {
@@ -107,7 +139,10 @@ export default function MatchDetailsScreen() {
 
   const joined = isAlreadyJoined();
   const full = isFull();
+  const owner = isOwner();
   const joinDisabled = joined || full || isJoining;
+  const hasTeams = match.teams && match.teams.length === 2;
+  const canGenerateTeams = owner && match.players.length >= 4;
 
   return (
     <View style={styles.container}>
@@ -128,24 +163,46 @@ export default function MatchDetailsScreen() {
           />
         </View>
 
-        <Text style={styles.sectionTitle}>Jogadores</Text>
-
-        {match.players.length === 0 ? (
-          <Text style={styles.empty}>Nenhum jogador ainda</Text>
+        {/* ─── Teams section ─────────────────────────────────── */}
+        {hasTeams ? (
+          <TeamsSection teams={match.teams} />
         ) : (
-          <FlatList
-            data={match.players}
-            keyExtractor={(item) => item._id}
-            scrollEnabled={false}
-            renderItem={({ item, index }) => (
-              <View style={styles.playerRow}>
-                <View style={styles.playerIndex}>
-                  <Text style={styles.playerIndexText}>{index + 1}</Text>
-                </View>
-                <Text style={styles.playerName}>{item.name}</Text>
-              </View>
+          <>
+            <Text style={styles.sectionTitle}>Jogadores</Text>
+
+            {match.players.length === 0 ? (
+              <Text style={styles.empty}>Nenhum jogador ainda</Text>
+            ) : (
+              <FlatList
+                data={match.players}
+                keyExtractor={(item) => item._id}
+                scrollEnabled={false}
+                renderItem={({ item, index }) => (
+                  <View style={styles.playerRow}>
+                    <View style={styles.playerIndex}>
+                      <Text style={styles.playerIndexText}>{index + 1}</Text>
+                    </View>
+                    <Text style={styles.playerName}>{item.name}</Text>
+                    <Text style={styles.playerOverall}>{item.overall}</Text>
+                  </View>
+                )}
+              />
             )}
-          />
+
+            {canGenerateTeams && (
+              <TouchableOpacity
+                style={styles.generateButton}
+                onPress={handleGenerateTeams}
+                disabled={isGenerating}
+              >
+                {isGenerating ? (
+                  <ActivityIndicator color={theme.textOnPrimary} />
+                ) : (
+                  <Text style={styles.generateButtonText}>⚡ Gerar Times</Text>
+                )}
+              </TouchableOpacity>
+            )}
+          </>
         )}
       </ScrollView>
 
@@ -164,6 +221,47 @@ export default function MatchDetailsScreen() {
           )}
         </TouchableOpacity>
       </View>
+    </View>
+  );
+}
+
+// ─── Teams Section Component ──────────────────────────────────────────────────
+
+function TeamsSection({ teams }: { teams: Team[] }) {
+  const [teamA, teamB] = teams;
+  return (
+    <View>
+      <View style={styles.teamsBadgeRow}>
+        <Text style={styles.teamsBadge}>⚡ Times balanceados automaticamente</Text>
+      </View>
+
+      <TeamCard team={teamA} accentColor={TEAM_A_COLOR} />
+      <TeamCard team={teamB} accentColor={TEAM_B_COLOR} />
+    </View>
+  );
+}
+
+function TeamCard({ team, accentColor }: { team: Team; accentColor: string }) {
+  return (
+    <View style={[styles.teamCard, { borderLeftColor: accentColor }]}>
+      <View style={styles.teamHeader}>
+        <Text style={[styles.teamName, { color: accentColor }]}>{team.name}</Text>
+        <View style={[styles.teamOverallBadge, { backgroundColor: accentColor }]}>
+          <Text style={styles.teamOverallText}>Overall {team.totalOverall}</Text>
+        </View>
+      </View>
+
+      {team.players.map((player, index) => (
+        <View key={player._id} style={styles.teamPlayerRow}>
+          <Text style={styles.teamPlayerIndex}>{index + 1}</Text>
+          <Text style={styles.teamPlayerName}>{player.name}</Text>
+          <View style={[styles.overallPill, { borderColor: accentColor }]}>
+            <Text style={[styles.overallPillText, { color: accentColor }]}>
+              {player.overall}
+            </Text>
+          </View>
+        </View>
+      ))}
     </View>
   );
 }
@@ -295,6 +393,96 @@ const styles = StyleSheet.create({
   playerName: {
     color: theme.text,
     fontSize: 15,
+    flex: 1,
+  },
+  playerOverall: {
+    color: theme.textSecondary,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  generateButton: {
+    backgroundColor: theme.primary,
+    padding: 14,
+    borderRadius: 50,
+    alignItems: "center",
+    marginTop: 20,
+  },
+  generateButtonText: {
+    color: theme.textOnPrimary,
+    fontWeight: "bold",
+    fontSize: 15,
+  },
+  // ─── Teams ───────────────────────────────────────────────
+  teamsBadgeRow: {
+    marginBottom: 16,
+  },
+  teamsBadge: {
+    color: theme.textSecondary,
+    fontSize: 13,
+    fontStyle: "italic",
+  },
+  teamCard: {
+    backgroundColor: theme.card,
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: theme.border,
+    borderLeftWidth: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  teamHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 14,
+  },
+  teamName: {
+    fontSize: 17,
+    fontWeight: "bold",
+  },
+  teamOverallBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  teamOverallText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  teamPlayerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: theme.border,
+    gap: 10,
+  },
+  teamPlayerIndex: {
+    color: theme.textMuted,
+    fontSize: 13,
+    width: 18,
+    textAlign: "center",
+  },
+  teamPlayerName: {
+    color: theme.text,
+    fontSize: 15,
+    flex: 1,
+  },
+  overallPill: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  overallPillText: {
+    fontSize: 12,
+    fontWeight: "700",
   },
   footer: {
     position: "absolute",

@@ -15,6 +15,8 @@ import { getUserById } from '../services/usersService';
 import { sendSuccess } from '../utils/response';
 import { parseODataQuery } from '../utils/odataQueryParser';
 
+const LEADERBOARD_LIMIT = 50;
+
 // ─── Get Current User ─────────────────────────────────────────────────────────
 
 export const getMe = async (
@@ -56,6 +58,38 @@ export const getUsers = async (
 
     const users = await query.exec();
     sendSuccess(res, 'Users retrieved', users);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ─── Leaderboard ──────────────────────────────────────────────────────────────
+// GET /users/leaderboard
+// Returns top 50 players sorted by xp DESC, level DESC, each with their position.
+
+export const getLeaderboard = async (
+  _req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const players = await User.find()
+      .select('name xp level rank overall -password')
+      .sort({ xp: -1, level: -1 })
+      .limit(LEADERBOARD_LIMIT)
+      .lean();
+
+    const leaderboard = players.map((player, index) => ({
+      position: index + 1,
+      _id:      player._id,
+      name:     player.name,
+      xp:       player.xp   ?? 0,
+      level:    player.level ?? 1,
+      rank:     player.rank  ?? 'Bronze',
+      overall:  player.overall ?? 70,
+    }));
+
+    sendSuccess(res, 'Leaderboard retrieved', leaderboard);
   } catch (err) {
     next(err);
   }
