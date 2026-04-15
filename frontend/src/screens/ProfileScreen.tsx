@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import {
   Animated,
   StyleSheet,
@@ -9,9 +9,10 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { router } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/colors';
-import { Rank } from '../services/userService';
+import { Rank, getPlayerStats, PlayerStats } from '../services/userService';
 
 const theme = colors;
 
@@ -84,6 +85,7 @@ function LevelUpToast({ xpGained }: { xpGained: number }) {
 
 export default function ProfileScreen() {
   const { user, isLoading } = useAuth();
+  const [stats, setStats] = useState<PlayerStats | null>(null);
 
   // Detect XP gains between renders to show the toast
   const prevXpRef = useRef<number | null>(null);
@@ -98,6 +100,16 @@ export default function ProfileScreen() {
     }
     prevXpRef.current = user.xp;
   }, [user?.xp]);
+
+  // Refresh stats whenever screen gains focus (e.g. after rating)
+  useFocusEffect(
+    useCallback(() => {
+      if (!user?.id) return;
+      getPlayerStats(user.id)
+        .then(setStats)
+        .catch(() => null);
+    }, [user?.id])
+  );
 
   if (isLoading || !user) {
     return (
@@ -146,15 +158,41 @@ export default function ProfileScreen() {
 
         {/* ── Stats row ───────────────────────────────────── */}
         <View style={styles.statsRow}>
-          <StatBox label="Overall" value={String(user.overall)} />
+          <StatBox label="Overall" value={String(stats?.overall ?? user.overall)} />
           <StatBox label="Level"   value={String(user.level)}   />
           <StatBox label="XP"      value={String(user.xp)}      />
+        </View>
+
+        {/* ── Rating stats card ───────────────────────────── */}
+        <View style={styles.ratingCard}>
+          <Text style={styles.ratingCardTitle}>Desempenho</Text>
+          <View style={styles.ratingRow}>
+            <RatingStat
+              label="Média de notas"
+              value={
+                stats && stats.totalMatches > 0
+                  ? `${stats.averageRating.toFixed(1)}/10`
+                  : "—"
+              }
+              highlight={!!stats && stats.totalMatches > 0}
+            />
+            <View style={styles.ratingDivider} />
+            <RatingStat
+              label="Partidas avaliadas"
+              value={stats ? String(stats.totalMatches) : "0"}
+            />
+          </View>
+          {(!stats || stats.totalMatches === 0) && (
+            <Text style={styles.ratingHint}>
+              Participe de partidas para receber avaliações e melhorar seu overall
+            </Text>
+          )}
         </View>
 
         {/* ── Leaderboard link ────────────────────────────── */}
         <TouchableOpacity
           style={styles.leaderboardButton}
-          onPress={() => router.push('/leaderboard')}
+          onPress={() => router.push('/(tabs)/ranking')}
           activeOpacity={0.85}
         >
           <Text style={styles.leaderboardButtonText}>🏆 Ver Ranking Global</Text>
@@ -170,6 +208,25 @@ function StatBox({ label, value }: { label: string; value: string }) {
     <View style={styles.statBox}>
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function RatingStat({
+  label,
+  value,
+  highlight,
+}: {
+  label: string;
+  value: string;
+  highlight?: boolean;
+}) {
+  return (
+    <View style={styles.ratingStat}>
+      <Text style={[styles.ratingStatValue, highlight && styles.ratingStatValueHighlight]}>
+        {value}
+      </Text>
+      <Text style={styles.ratingStatLabel}>{label}</Text>
     </View>
   );
 }
@@ -285,6 +342,59 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: theme.textMuted,
     marginTop: 2,
+  },
+  ratingCard: {
+    width: '100%',
+    backgroundColor: theme.card,
+    borderRadius: 16,
+    padding: 20,
+    marginTop: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: theme.border,
+    gap: 12,
+  },
+  ratingCardTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  ratingDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: theme.border,
+    marginHorizontal: 20,
+  },
+  ratingStat: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+  },
+  ratingStatValue: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: theme.textSecondary,
+  },
+  ratingStatValueHighlight: {
+    color: theme.primary,
+  },
+  ratingStatLabel: {
+    fontSize: 12,
+    color: theme.textMuted,
+    textAlign: 'center',
+  },
+  ratingHint: {
+    fontSize: 12,
+    color: theme.textMuted,
+    textAlign: 'center',
+    lineHeight: 17,
+    marginTop: 4,
   },
   leaderboardButton: {
     marginTop: 20,

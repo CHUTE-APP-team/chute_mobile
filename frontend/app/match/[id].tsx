@@ -165,7 +165,10 @@ export default function MatchDetailsScreen() {
 
         {/* ─── Teams section ─────────────────────────────────── */}
         {hasTeams ? (
-          <TeamsSection teams={match.teams} />
+          <>
+            <Text style={styles.sectionTitle}>Times</Text>
+            <TeamsSection teams={match.teams} />
+          </>
         ) : (
           <>
             <Text style={styles.sectionTitle}>Jogadores</Text>
@@ -189,6 +192,17 @@ export default function MatchDetailsScreen() {
               />
             )}
 
+            {match.players.length < 4 && match.players.length > 0 && (
+              <View style={styles.teamsHint}>
+                <Text style={styles.teamsHintText}>
+                  ⏳ Times serão definidos quando houver mais jogadores
+                </Text>
+                <Text style={styles.teamsHintSub}>
+                  {4 - match.players.length} jogador{4 - match.players.length !== 1 ? "es" : ""} restante{4 - match.players.length !== 1 ? "s" : ""} para gerar os times
+                </Text>
+              </View>
+            )}
+
             {canGenerateTeams && (
               <TouchableOpacity
                 style={styles.generateButton}
@@ -207,6 +221,15 @@ export default function MatchDetailsScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
+        {joined && match.players.length >= 2 && (
+          <TouchableOpacity
+            style={styles.rateButton}
+            onPress={() => router.push(`/match/${match._id}/rate` as any)}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.rateButtonText}>⭐ Avaliar jogadores</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={[styles.joinButton, joinDisabled && styles.joinButtonDisabled]}
           onPress={handleJoin}
@@ -412,6 +435,27 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 15,
   },
+  teamsHint: {
+    backgroundColor: theme.card,
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: theme.border,
+    alignItems: "center",
+    gap: 6,
+  },
+  teamsHintText: {
+    color: theme.textSecondary,
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  teamsHintSub: {
+    color: theme.textMuted,
+    fontSize: 12,
+    textAlign: "center",
+  },
   // ─── Teams ───────────────────────────────────────────────
   teamsBadgeRow: {
     marginBottom: 16,
@@ -495,6 +539,19 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
     borderTopWidth: 1,
     borderTopColor: theme.border,
+  },
+  rateButton: {
+    backgroundColor: theme.card,
+    padding: 14,
+    borderRadius: 50,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: theme.primary,
+  },
+  rateButtonText: {
+    color: theme.primary,
+    fontWeight: "700",
+    fontSize: 15,
   },
   joinButton: {
     backgroundColor: theme.primary,

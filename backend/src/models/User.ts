@@ -15,6 +15,8 @@ export interface IUser extends Document {
   xp: number;
   level: number;
   rank: Rank;
+  averageRating: number;
+  totalMatches: number;
   createdAt: Date;
 }
 
@@ -62,6 +64,16 @@ const UserSchema: Schema = new Schema<IUser>(
       type: String,
       enum: RANKS,
       default: 'Bronze',
+    },
+    averageRating: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 10,
+    },
+    totalMatches: {
+      type: Number,
+      default: 0,
     },
   },
   {

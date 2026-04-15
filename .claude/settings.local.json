@@ -4,7 +4,9 @@
       "Bash(npm install:*)",
       "Bash(npx expo:*)",
       "Bash(ipconfig)",
-      "Bash(eas --version)"
+      "Bash(eas --version)",
+      "Bash(ls frontend/src/)",
+      "Bash(ls backend/src/)"
     ]
   }
 }

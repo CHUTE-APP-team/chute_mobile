@@ -1,6 +1,6 @@
 import { Types } from 'mongoose';
 import User, { Rank } from '../models/User';
-import { IMatch, IPlayerResult } from '../models/Match';
+import Match, { IMatch, IPlayerResult } from '../models/Match';
 
 // ─── Pure helpers ─────────────────────────────────────────────────────────────
 
@@ -68,4 +68,42 @@ export async function updatePlayerProgress(results: IPlayerResult[]): Promise<vo
       await user.save();
     })
   );
+}
+
+// ─── Recalculate overall / averageRating / totalMatches for a player ──────────
+// Scans all matches where this player has a result and recomputes from scratch.
+
+export async function recalcPlayerStats(playerId: string): Promise<void> {
+  const user = await User.findById(playerId);
+  if (!user) return;
+
+  // Find all matches containing a result for this player
+  const matches = await Match.find({
+    'playerResults.playerId': new Types.ObjectId(playerId),
+  }).select('playerResults').lean();
+
+  const ratings: number[] = [];
+
+  for (const match of matches) {
+    const result = match.playerResults.find(
+      (r) => r.playerId.toString() === playerId
+    );
+    if (result) ratings.push(result.notaFinal);
+  }
+
+  const totalMatches   = ratings.length;
+  const averageRating  = totalMatches > 0
+    ? Math.round((ratings.reduce((s, r) => s + r, 0) / totalMatches) * 10) / 10
+    : 0;
+
+  // overall = averageRating mapped to 1–99 scale
+  // 0 stars → 50 (floor), 10 stars → 99 (ceiling)
+  const overall = totalMatches > 0
+    ? Math.min(99, Math.max(1, Math.round(50 + averageRating * 4.9)))
+    : user.overall;
+
+  user.totalMatches  = totalMatches;
+  user.averageRating = averageRating;
+  user.overall       = overall;
+  await user.save();
 }

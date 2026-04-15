@@ -14,6 +14,8 @@ export interface IPlayerResult {
   isWinner: boolean;
   isMvp: boolean;
   xpEarned: number;
+  goals: number;
+  assists: number;
 }
 
 export interface IMatch extends Document {
@@ -96,10 +98,12 @@ const MatchSchema: Schema = new Schema<IMatch>(
     playerResults: [
       {
         playerId:   { type: Schema.Types.ObjectId, ref: 'User', required: true },
-        notaFinal:  { type: Number, required: true },
+        notaFinal:  { type: Number, required: true, min: 0, max: 10 },
         isWinner:   { type: Boolean, default: false },
         isMvp:      { type: Boolean, default: false },
         xpEarned:   { type: Number, default: 0 },
+        goals:      { type: Number, default: 0 },
+        assists:    { type: Number, default: 0 },
         _id: false,
       },
     ],

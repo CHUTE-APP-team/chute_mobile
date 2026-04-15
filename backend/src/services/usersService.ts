@@ -10,6 +10,8 @@ export interface UserProfile {
   xp: number;
   level: number;
   rank: Rank;
+  averageRating: number;
+  totalMatches: number;
 }
 
 export const getUserById = async (userId: string): Promise<UserProfile> => {
@@ -17,13 +19,15 @@ export const getUserById = async (userId: string): Promise<UserProfile> => {
   if (!user) throw new AppError('User not found', 404);
 
   return {
-    id:      String(user._id),
-    name:    user.name,
-    email:   user.email,
-    role:    user.role,
-    overall: user.overall,
-    xp:      user.xp,
-    level:   user.level,
-    rank:    user.rank,
+    id:            String(user._id),
+    name:          user.name,
+    email:         user.email,
+    role:          user.role,
+    overall:       user.overall,
+    xp:            user.xp,
+    level:         user.level,
+    rank:          user.rank,
+    averageRating: user.averageRating ?? 0,
+    totalMatches:  user.totalMatches  ?? 0,
   };
 };

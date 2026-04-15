@@ -22,7 +22,7 @@ import { AppError } from '../utils/AppError';
 import { sendSuccess } from '../utils/response';
 import { parseODataQuery } from '../utils/odataQueryParser';
 import { generateBalancedTeams, shouldAutoGenerateTeams } from '../services/matchService';
-import { buildPlayerResults, updatePlayerProgress, FinishMatchPayload } from '../services/progressionService';
+import { buildPlayerResults, updatePlayerProgress, FinishMatchPayload, recalcPlayerStats } from '../services/progressionService';
 
 const MIN_PLAYERS_FOR_TEAMS = 4;
 
@@ -190,6 +190,93 @@ export async function generateMatchTeams(
       .populate('teams.players', 'name overall -password');
 
     sendSuccess(res, 'Times gerados com sucesso', { teams: populated!.teams });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── Rate Players ─────────────────────────────────────────────────────────────
+// POST /matches/:id/rate
+// Body: { playerId, rating, goals?, assists?, mvp? }
+
+export async function ratePlayer(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const match = await Match.findById(req.params.id);
+    if (!match) throw new AppError('Match not found', 404);
+
+    const { playerId, rating, goals = 0, assists = 0, mvp = false } = req.body;
+
+    if (typeof rating !== 'number' || rating < 0 || rating > 10) {
+      throw new AppError('rating must be a number between 0 and 10', 400);
+    }
+
+    const targetId = new Types.ObjectId(playerId);
+    const isInMatch = match.players.some((p) => p.equals(targetId));
+    if (!isInMatch) throw new AppError('Player is not in this match', 400);
+
+    // Upsert: update if exists, insert otherwise
+    const existingIndex = match.playerResults.findIndex((r) =>
+      r.playerId.equals(targetId)
+    );
+
+    const winnerTeam = match.teams.find((t) => t.name === match.winnerTeam);
+    const isWinner = winnerTeam?.players.some((p) => p.equals(targetId)) ?? false;
+    const isMvp    = mvp || match.mvpPlayerId?.equals(targetId) || false;
+
+    if (existingIndex >= 0) {
+      match.playerResults[existingIndex].notaFinal = rating;
+      match.playerResults[existingIndex].goals     = goals;
+      match.playerResults[existingIndex].assists   = assists;
+      match.playerResults[existingIndex].isMvp     = isMvp;
+    } else {
+      match.playerResults.push({
+        playerId: targetId,
+        notaFinal: rating,
+        isWinner,
+        isMvp,
+        xpEarned: 0,
+        goals,
+        assists,
+      });
+    }
+
+    await match.save();
+
+    // Recalculate player overall / averageRating / totalMatches
+    await recalcPlayerStats(playerId);
+
+    sendSuccess(res, 'Avaliação salva', { playerId, rating, goals, assists, isMvp });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── Get Teams ────────────────────────────────────────────────────────────────
+
+export async function getMatchTeams(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const match = await Match.findById(req.params.id)
+      .populate('players', 'name overall -password')
+      .populate('teams.players', 'name overall -password');
+
+    if (!match) throw new AppError('Match not found', 404);
+
+    sendSuccess(res, 'Teams retrieved', {
+      teams: match.teams,
+      players: match.players,
+      playerCount: match.players.length,
+      maxPlayers: match.maxPlayers,
+      hasTeams: match.teams.length === 2,
+      teamsGeneratedAt: match.teamsGeneratedAt ?? null,
+    });
   } catch (err) {
     next(err);
   }

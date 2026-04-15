@@ -59,11 +59,26 @@ export async function joinMatch(matchId: string): Promise<Match> {
 }
 
 export async function joinMatchDetail(matchId: string): Promise<MatchDetail> {
-  const response = await api.post(`/matches/${matchId}/join`);
-  return response.data.data as MatchDetail;
+  const joinResponse = await api.post(`/matches/${matchId}/join`);
+  const raw = joinResponse.data.data;
+  // Backend returns populated data on join — re-fetch with full expand to guarantee teams.players
+  const detailResponse = await api.get(`/matches/${raw._id}?$expand=players,teams.players`);
+  return detailResponse.data.data as MatchDetail;
 }
 
 export async function generateTeams(matchId: string): Promise<Team[]> {
   const response = await api.post(`/matches/${matchId}/generate-teams`);
   return response.data.data.teams as Team[];
+}
+
+export interface RatePlayerPayload {
+  playerId: string;
+  rating: number;
+  goals?: number;
+  assists?: number;
+  mvp?: boolean;
+}
+
+export async function ratePlayer(matchId: string, payload: RatePlayerPayload): Promise<void> {
+  await api.post(`/matches/${matchId}/rate`, payload);
 }
