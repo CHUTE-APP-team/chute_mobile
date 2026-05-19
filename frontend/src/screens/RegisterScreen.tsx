@@ -35,7 +35,7 @@ export default function RegisterScreen() {
     setIsLoading(true);
     try {
       await register(name, email, password, role);
-      router.replace("/home");
+      router.replace("/(tabs)/home");
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.data?.message) {
         setError(err.response.data.message);

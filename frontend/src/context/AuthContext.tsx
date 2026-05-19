@@ -39,14 +39,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function login(email: string, password: string) {
     await loginService(email, password);
-    const profile = await getCurrentUser();
-    setUser(profile);
+    try {
+      const profile = await getCurrentUser();
+      setUser(profile);
+    } catch (err) {
+      console.warn('[AuthContext] login: failed to fetch profile after login:', err);
+      throw err;
+    }
   }
 
   async function register(name: string, email: string, password: string, role?: string) {
     await registerService(name, email, password, role);
-    const profile = await getCurrentUser();
-    setUser(profile);
+    try {
+      const profile = await getCurrentUser();
+      setUser(profile);
+    } catch (err) {
+      console.warn('[AuthContext] register: failed to fetch profile after register:', err);
+      throw err;
+    }
   }
 
   async function logout() {

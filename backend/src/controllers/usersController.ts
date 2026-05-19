@@ -14,6 +14,10 @@ import User from '../models/User';
 import { getUserById } from '../services/usersService';
 import { sendSuccess } from '../utils/response';
 import { parseODataQuery } from '../utils/odataQueryParser';
+import { AppError } from '../utils/AppError';
+
+const LEADERBOARD_LIMIT = 50;
+const RANKING_DEFAULT_LIMIT = 20;
 
 // ─── Get Current User ─────────────────────────────────────────────────────────
 
@@ -43,10 +47,16 @@ export const getUsers = async (
   try {
     const odata = parseODataQuery(req.query);
 
-    // Always exclude password, merge with any $select projection
-    const projection = odata.select
-      ? { ...odata.select, password: 0 }
-      : { password: 0 };
+    // Always exclude password.
+    // If $select was provided, remove 'password' from the inclusion list (pure inclusion projection).
+    // Otherwise fall back to a pure exclusion projection.
+    let projection: Record<string, number> | string;
+    if (odata.select) {
+      const { password: _omit, ...safeSelect } = odata.select as Record<string, number>;
+      projection = safeSelect;
+    } else {
+      projection = '-password';
+    }
 
     let query = User.find(odata.filter).select(projection).sort({ name: 1 });
 
@@ -56,6 +66,115 @@ export const getUsers = async (
 
     const users = await query.exec();
     sendSuccess(res, 'Users retrieved', users);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ─── Ranking ──────────────────────────────────────────────────────────────────
+// GET /ranking?limit=20&page=1
+// Ordered by: overall DESC → averageRating DESC → totalMatches DESC
+
+export const getRanking = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const limit = Math.min(Number(req.query.limit) || RANKING_DEFAULT_LIMIT, 100);
+    const page  = Math.max(Number(req.query.page)  || 1, 1);
+    const skip  = (page - 1) * limit;
+
+    const players = await User.find()
+      .select('name overall averageRating totalMatches xp level rank')
+      .sort({ overall: -1, averageRating: -1, totalMatches: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    const total = await User.countDocuments();
+
+    const ranking = players.map((player, index) => ({
+      position:      skip + index + 1,
+      _id:           player._id,
+      name:          player.name,
+      overall:       player.overall       ?? 70,
+      averageRating: player.averageRating ?? 0,
+      totalMatches:  player.totalMatches  ?? 0,
+      xp:            player.xp            ?? 0,
+      level:         player.level         ?? 1,
+      rank:          player.rank          ?? 'Bronze',
+    }));
+
+    sendSuccess(res, 'Ranking retrieved', {
+      ranking,
+      page,
+      limit,
+      total,
+      hasMore: skip + limit < total,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ─── Player Stats ─────────────────────────────────────────────────────────────
+// GET /users/:id/stats
+
+export const getPlayerStats = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const user = await User.findById(req.params.id)
+      .select('name overall averageRating totalMatches xp level rank')
+      .lean();
+
+    if (!user) throw new AppError('User not found', 404);
+
+    sendSuccess(res, 'Player stats retrieved', {
+      _id:           user._id,
+      name:          user.name,
+      overall:       user.overall       ?? 70,
+      averageRating: user.averageRating ?? 0,
+      totalMatches:  user.totalMatches  ?? 0,
+      xp:            user.xp            ?? 0,
+      level:         user.level         ?? 1,
+      rank:          user.rank          ?? 'Bronze',
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ─── Leaderboard ──────────────────────────────────────────────────────────────
+// GET /users/leaderboard
+// Returns top 50 players sorted by xp DESC, level DESC, each with their position.
+
+export const getLeaderboard = async (
+  _req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const players = await User.find()
+      .select('name xp level rank overall')
+      .sort({ xp: -1, level: -1 })
+      .limit(LEADERBOARD_LIMIT)
+      .lean();
+
+    const leaderboard = players.map((player, index) => ({
+      position: index + 1,
+      _id:      player._id,
+      name:     player.name,
+      xp:       player.xp   ?? 0,
+      level:    player.level ?? 1,
+      rank:     player.rank  ?? 'Bronze',
+      overall:  player.overall ?? 70,
+    }));
+
+    sendSuccess(res, 'Leaderboard retrieved', leaderboard);
   } catch (err) {
     next(err);
   }

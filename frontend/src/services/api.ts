@@ -3,7 +3,9 @@ import { Platform } from 'react-native';
 import { getToken } from './tokenService';
 
 const BASE_URL =
-  Platform.OS === 'web' ? 'http://localhost:3000' : 'http://192.168.0.6:3000';
+  Platform.OS === 'web'
+    ? 'http://localhost:3000'
+    : process.env.EXPO_PUBLIC_API_URL ?? 'http://192.168.0.7:3000';
 
 console.log(`[API] baseURL: ${BASE_URL} (platform: ${Platform.OS})`);
 
