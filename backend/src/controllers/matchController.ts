@@ -20,6 +20,7 @@ import Match from '../models/Match';
 import { AppError } from '../utils/AppError';
 import { sendSuccess } from '../utils/response';
 import { parseODataQuery } from '../utils/odataQueryParser';
+import { generateTeams } from '../services/matchService';
 
 // ─── Create Match ─────────────────────────────────────────────────────────────
 
@@ -134,6 +135,39 @@ export async function joinMatch(
     // Re-fetch with players populated so the client gets full player objects
     const populated = await Match.findById(match._id).populate('players', 'name -password');
     sendSuccess(res, 'Joined match', populated);
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── Generate Teams ───────────────────────────────────────────────────────────
+
+export async function generateMatchTeams(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const match = await Match.findById(req.params.id);
+
+    if (!match) throw new AppError('Match not found', 404);
+
+    if (match.createdBy.toString() !== (req.userId as string)) {
+      throw new AppError('Only the match owner can generate teams', 403);
+    }
+
+    if (match.players.length < 4) {
+      throw new AppError('At least 4 players are required to generate teams', 400);
+    }
+
+    const [teamA, teamB] = generateTeams(match.players);
+    match.teams = [teamA, teamB];
+    await match.save();
+
+    const populated = await Match.findById(match._id)
+      .populate('teams.players', '-password');
+
+    sendSuccess(res, 'Teams generated', { teams: populated!.teams });
   } catch (err) {
     next(err);
   }

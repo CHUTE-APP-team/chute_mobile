@@ -1,5 +1,10 @@
 import mongoose, { Document, Schema, Types } from 'mongoose';
 
+export interface ITeam {
+  name: string;
+  players: Types.ObjectId[];
+}
+
 export interface IMatch extends Document {
   title: string;
   location: string;
@@ -8,6 +13,7 @@ export interface IMatch extends Document {
   players: Types.ObjectId[];
   createdBy: Types.ObjectId;
   createdAt: Date;
+  teams: ITeam[];
 }
 
 const MatchSchema: Schema = new Schema<IMatch>(
@@ -42,6 +48,12 @@ const MatchSchema: Schema = new Schema<IMatch>(
       ref: 'User',
       required: true,
     },
+    teams: [
+      {
+        name: { type: String, required: true },
+        players: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+      },
+    ],
   },
   {
     timestamps: true,
