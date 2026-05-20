@@ -1,3 +1,9 @@
-import MatchScreen from "@/src/screens/MatchScreen";
+import { useEffect } from "react";
+import { router } from "expo-router";
 
-export default MatchScreen;
+export default function MatchRedirect() {
+  useEffect(() => {
+    router.replace("/(tabs)/matches");
+  }, []);
+  return null;
+}

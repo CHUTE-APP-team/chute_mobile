@@ -28,7 +28,7 @@ export const getMe = async (
 ): Promise<void> => {
   try {
     const user = await getUserById(req.userId!);
-    sendSuccess(res, user);
+    sendSuccess(res, 'User retrieved', user);
   } catch (err) {
     next(err);
   }

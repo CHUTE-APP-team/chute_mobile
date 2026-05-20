@@ -17,7 +17,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.get('/health', (_req: Request, res: Response) => {
-  res.json({ success: true, message: 'CHUTE API is running' });
+  res.json({ ok: true });
+});
+
+app.get('/api/health', (_req: Request, res: Response) => {
+  res.json({ ok: true });
 });
 
 app.use('/auth', authRoutes);

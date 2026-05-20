@@ -61,7 +61,7 @@ export async function getMatches(
   try {
     const odata = parseODataQuery(req.query);
 
-    let query = Match.find(odata.filter).sort({ date: 1 });
+    let query: any = Match.find(odata.filter).sort({ date: 1 });
 
     if (odata.select) query = query.select(odata.select);
 
@@ -91,7 +91,7 @@ export async function getMatch(
   try {
     const odata = parseODataQuery(req.query);
 
-    let query = Match.findById(req.params.id);
+    let query: any = Match.findById(req.params.id);
 
     if (odata.select) query = query.select(odata.select);
 
