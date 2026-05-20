@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { router } from 'expo-router';
 import { login as loginService, logout as logoutService, register as registerService } from '../services/authService';
-import { getCurrentUser, UserProfile } from '../services/userService';
+import { getCurrentUser, updateCurrentUser, deleteCurrentUser, UserProfile } from '../services/userService';
 import { getToken, removeToken } from '../services/tokenService';
 
 interface AuthContextData {
@@ -10,6 +10,9 @@ interface AuthContextData {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string, role?: string) => Promise<void>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
+  updateUser: (data: { name?: string; role?: string }) => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
@@ -65,8 +68,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.replace('/login');
   }
 
+  async function refreshUser() {
+    const profile = await getCurrentUser();
+    setUser(profile);
+  }
+
+  async function updateUser(data: { name?: string; role?: string }) {
+    const updated = await updateCurrentUser(data);
+    setUser(updated);
+  }
+
+  async function deleteAccount() {
+    await deleteCurrentUser();
+    await logoutService();
+    setUser(null);
+    router.replace('/login');
+  }
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, register, logout, refreshUser, updateUser, deleteAccount }}>
       {children}
     </AuthContext.Provider>
   );

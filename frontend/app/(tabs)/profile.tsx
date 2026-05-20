@@ -1,18 +1,24 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import {
+  Alert,
   Animated,
+  Modal,
   StyleSheet,
   Text,
+  TextInput,
+  TouchableOpacity,
   View,
   ScrollView,
   ActivityIndicator,
-  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '@/src/context/AuthContext';
 import { colors } from '@/src/theme/colors';
 import { Rank, getPlayerStats, PlayerStats } from '@/src/services/userService';
+import { ALL_ROLES, UserRole } from '@/src/utils/roleUtils';
 
 const theme = colors;
 
@@ -68,11 +74,114 @@ function LevelUpToast({ xpGained }: { xpGained: number }) {
   );
 }
 
+// ─── Edit Modal ───────────────────────────────────────────────────────────────
+
+interface EditModalProps {
+  visible: boolean;
+  initialName: string;
+  initialRole: UserRole;
+  email: string;
+  onClose: () => void;
+  onSave: (name: string, role: UserRole) => Promise<void>;
+}
+
+function EditModal({ visible, initialName, initialRole, email, onClose, onSave }: EditModalProps) {
+  const [name, setName] = useState(initialName);
+  const [role, setRole] = useState<UserRole>(initialRole);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (visible) {
+      setName(initialName);
+      setRole(initialRole);
+    }
+  }, [visible]);
+
+  async function handleSave() {
+    if (!name.trim()) {
+      Alert.alert('Nome obrigatório', 'O nome não pode estar vazio.');
+      return;
+    }
+    setSaving(true);
+    try {
+      await onSave(name.trim(), role);
+      onClose();
+    } catch {
+      Alert.alert('Erro', 'Não foi possível salvar as alterações. Tente novamente.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        style={styles.modalOverlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <View style={styles.modalSheet}>
+          <Text style={styles.modalTitle}>Editar perfil</Text>
+
+          <Text style={styles.fieldLabel}>Nome</Text>
+          <TextInput
+            style={styles.textInput}
+            value={name}
+            onChangeText={setName}
+            placeholderTextColor={theme.textMuted}
+            placeholder="Seu nome"
+            autoFocus
+          />
+
+          <Text style={styles.fieldLabel}>Email (não editável)</Text>
+          <TextInput
+            style={[styles.textInput, styles.textInputDisabled]}
+            value={email}
+            editable={false}
+          />
+
+          <Text style={styles.fieldLabel}>Posição / Role</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.roleRow}>
+            {ALL_ROLES.map((r) => (
+              <TouchableOpacity
+                key={r.value}
+                style={[styles.roleChip, role === r.value && styles.roleChipActive]}
+                onPress={() => setRole(r.value)}
+                activeOpacity={0.75}
+              >
+                <Text style={styles.roleChipEmoji}>{r.emoji}</Text>
+                <Text style={[styles.roleChipLabel, role === r.value && styles.roleChipLabelActive]}>
+                  {r.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          <View style={styles.modalActions}>
+            <TouchableOpacity style={styles.cancelBtn} onPress={onClose} disabled={saving}>
+              <Text style={styles.cancelBtnText}>Cancelar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={saving} activeOpacity={0.85}>
+              {saving
+                ? <ActivityIndicator color={theme.textOnPrimary} size="small" />
+                : <Text style={styles.saveBtnText}>Salvar</Text>
+              }
+            </TouchableOpacity>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+// ─── Profile Screen ───────────────────────────────────────────────────────────
+
 export default function ProfileScreen() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, updateUser, deleteAccount } = useAuth();
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const prevXpRef = useRef<number | null>(null);
   const [xpGained, setXpGained] = useState<number | null>(null);
+  const [editVisible, setEditVisible] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -91,10 +200,42 @@ export default function ProfileScreen() {
     }, [user?.id])
   );
 
+  function handleDeleteAccount() {
+    Alert.alert(
+      'Excluir conta',
+      'Essa ação é permanente e não pode ser desfeita. Deseja continuar?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Confirmar exclusão',
+          style: 'destructive',
+          onPress: async () => {
+            setDeletingAccount(true);
+            try {
+              await deleteAccount();
+            } catch {
+              setDeletingAccount(false);
+              Alert.alert('Erro', 'Não foi possível excluir a conta. Tente novamente.');
+            }
+          },
+        },
+      ]
+    );
+  }
+
   if (isLoading || !user) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator color={theme.primary} size="large" />
+      </View>
+    );
+  }
+
+  if (deletingAccount) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator color={theme.primary} size="large" />
+        <Text style={[styles.email, { marginTop: 16 }]}>Excluindo conta...</Text>
       </View>
     );
   }
@@ -108,6 +249,15 @@ export default function ProfileScreen() {
     <View style={styles.container}>
       {xpGained !== null && <LevelUpToast xpGained={xpGained} />}
 
+      <EditModal
+        visible={editVisible}
+        initialName={user.name}
+        initialRole={user.role as UserRole}
+        email={user.email}
+        onClose={() => setEditVisible(false)}
+        onSave={async (name, role) => { await updateUser({ name, role }); }}
+      />
+
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
         <View style={[styles.rankBadge, { borderColor: rankCfg.color }]}>
@@ -117,6 +267,10 @@ export default function ProfileScreen() {
 
         <Text style={styles.name}>{user.name}</Text>
         <Text style={styles.email}>{user.email}</Text>
+
+        <TouchableOpacity style={styles.editButton} onPress={() => setEditVisible(true)} activeOpacity={0.85}>
+          <Text style={styles.editButtonText}>✏️ Editar perfil</Text>
+        </TouchableOpacity>
 
         <View style={styles.progressCard}>
           <View style={styles.levelRow}>
@@ -155,6 +309,10 @@ export default function ProfileScreen() {
           <Text style={styles.leaderboardButtonText}>🏆 Ver Ranking Global</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteAccount} activeOpacity={0.85}>
+          <Text style={styles.deleteButtonText}>Excluir conta</Text>
+        </TouchableOpacity>
+
       </ScrollView>
     </View>
   );
@@ -186,7 +344,9 @@ const styles = StyleSheet.create({
   rankIcon:     { fontSize: 22 },
   rankLabel:    { fontSize: 16, fontWeight: '800', letterSpacing: 1.5 },
   name:         { fontSize: 26, fontWeight: 'bold', color: theme.text, marginBottom: 4 },
-  email:        { fontSize: 14, color: theme.textMuted, marginBottom: 28 },
+  email:        { fontSize: 14, color: theme.textMuted, marginBottom: 12 },
+  editButton:   { marginBottom: 20, paddingHorizontal: 20, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: theme.primary },
+  editButtonText: { fontSize: 14, fontWeight: '600', color: theme.primary },
   progressCard: { width: '100%', backgroundColor: theme.card, borderRadius: 16, padding: 20, marginBottom: 20, borderWidth: 1, borderColor: theme.border, gap: 10 },
   levelRow:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   levelLabel:   { fontSize: 18, fontWeight: 'bold', color: theme.text },
@@ -209,6 +369,26 @@ const styles = StyleSheet.create({
   ratingHint:   { fontSize: 12, color: theme.textMuted, textAlign: 'center', lineHeight: 17, marginTop: 4 },
   leaderboardButton: { marginTop: 20, width: '100%', backgroundColor: theme.card, borderRadius: 14, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: theme.border },
   leaderboardButtonText: { fontSize: 15, fontWeight: '700', color: theme.primary },
+  deleteButton: { marginTop: 12, width: '100%', borderRadius: 14, padding: 16, alignItems: 'center' },
+  deleteButtonText: { fontSize: 14, fontWeight: '600', color: '#E53E3E' },
   toast:        { position: 'absolute', top: 72, alignSelf: 'center', backgroundColor: theme.primary, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 24, zIndex: 99 },
   toastText:    { color: theme.textOnPrimary, fontWeight: 'bold', fontSize: 14 },
+  // Modal
+  modalOverlay:    { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.55)' },
+  modalSheet:      { backgroundColor: theme.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 28, paddingBottom: 40, gap: 12 },
+  modalTitle:      { fontSize: 20, fontWeight: 'bold', color: theme.text, marginBottom: 4 },
+  fieldLabel:      { fontSize: 12, fontWeight: '600', color: theme.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 },
+  textInput:       { backgroundColor: theme.background, borderWidth: 1, borderColor: theme.border, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12, fontSize: 16, color: theme.text },
+  textInputDisabled: { opacity: 0.5 },
+  roleRow:         { flexDirection: 'row', marginVertical: 4 },
+  roleChip:        { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: theme.border, marginRight: 8, backgroundColor: theme.background },
+  roleChipActive:  { borderColor: theme.primary, backgroundColor: theme.primary + '22' },
+  roleChipEmoji:   { fontSize: 16 },
+  roleChipLabel:   { fontSize: 13, fontWeight: '600', color: theme.textMuted },
+  roleChipLabelActive: { color: theme.primary },
+  modalActions:    { flexDirection: 'row', gap: 12, marginTop: 8 },
+  cancelBtn:       { flex: 1, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: theme.border, alignItems: 'center' },
+  cancelBtnText:   { fontSize: 15, fontWeight: '600', color: theme.textMuted },
+  saveBtn:         { flex: 1, padding: 14, borderRadius: 12, backgroundColor: theme.primary, alignItems: 'center' },
+  saveBtnText:     { fontSize: 15, fontWeight: '700', color: theme.textOnPrimary },
 });

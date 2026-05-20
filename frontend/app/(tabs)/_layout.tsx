@@ -1,9 +1,12 @@
 import { Tabs } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors } from "../../src/theme/colors";
 
 const theme = colors;
 
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tabs
       screenOptions={{
@@ -14,8 +17,8 @@ export default function TabsLayout() {
           backgroundColor: theme.card,
           borderTopColor: theme.border,
           borderTopWidth: 1,
-          height: 60,
-          paddingBottom: 8,
+          height: 60 + insets.bottom,
+          paddingBottom: insets.bottom + 4,
           paddingTop: 6,
         },
         tabBarLabelStyle: {
@@ -39,6 +42,15 @@ export default function TabsLayout() {
           title: "Partidas",
           tabBarIcon: ({ color, focused }) => (
             <TabIcon emoji="⚽" color={color} focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="teams"
+        options={{
+          title: "Times",
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon emoji="👥" color={color} focused={focused} />
           ),
         }}
       />

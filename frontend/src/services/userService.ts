@@ -36,3 +36,12 @@ export async function getPlayerStats(userId: string): Promise<PlayerStats> {
   const response = await api.get(`/users/${userId}/stats`);
   return response.data.data as PlayerStats;
 }
+
+export async function updateCurrentUser(data: { name?: string; role?: string }): Promise<UserProfile> {
+  const response = await api.put('/users/me', data);
+  return response.data.data as UserProfile;
+}
+
+export async function deleteCurrentUser(): Promise<void> {
+  await api.delete('/users/me');
+}

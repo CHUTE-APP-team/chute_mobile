@@ -10,7 +10,7 @@
 
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../middlewares/authMiddleware';
-import User from '../models/User';
+import User, { USER_ROLES } from '../models/User';
 import { getUserById } from '../services/usersService';
 import { sendSuccess } from '../utils/response';
 import { parseODataQuery } from '../utils/odataQueryParser';
@@ -29,6 +29,54 @@ export const getMe = async (
   try {
     const user = await getUserById(req.userId!);
     sendSuccess(res, 'User retrieved', user);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ─── Update Current User ──────────────────────────────────────────────────────
+
+export const updateMe = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { name, role } = req.body as { name?: string; role?: string };
+
+    if (role && !USER_ROLES.includes(role as any)) {
+      throw new AppError(`Invalid role. Must be one of: ${USER_ROLES.join(', ')}`, 400);
+    }
+
+    const updates: Record<string, string> = {};
+    if (name)  updates.name = name.trim();
+    if (role)  updates.role = role;
+
+    const user = await User.findByIdAndUpdate(
+      req.userId,
+      { $set: updates },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!user) throw new AppError('User not found', 404);
+
+    sendSuccess(res, 'User updated', user);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ─── Delete Current User ──────────────────────────────────────────────────────
+
+export const deleteMe = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const user = await User.findByIdAndDelete(req.userId);
+    if (!user) throw new AppError('User not found', 404);
+    sendSuccess(res, 'Account deleted', null);
   } catch (err) {
     next(err);
   }

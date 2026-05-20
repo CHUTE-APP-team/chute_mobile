@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes';
 import usersRoutes from './routes/usersRoutes';
 import matchRoutes from './routes/matchRoutes';
+import teamRoutes from './routes/teamRoutes';
 import { loggerMiddleware } from './middlewares/loggerMiddleware';
 import { errorMiddleware } from './middlewares/errorMiddleware';
 
@@ -27,6 +28,7 @@ app.get('/api/health', (_req: Request, res: Response) => {
 app.use('/auth', authRoutes);
 app.use('/users', usersRoutes);
 app.use('/matches', matchRoutes);
+app.use('/teams', teamRoutes);
 
 app.use(errorMiddleware);
 
