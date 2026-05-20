@@ -21,7 +21,7 @@ export async function createPost(
 
     const post = await Post.create({ content: content.trim(), author: req.userId, likes: [] });
     const populated = await Post.findById(post._id)
-      .populate('author', 'name -password');
+      .populate('author', 'name');
 
     sendSuccess(res, 'Post created', populated, 201);
   } catch (err) {
@@ -38,7 +38,7 @@ export async function getPosts(
 ): Promise<void> {
   try {
     const posts = await Post.find()
-      .populate('author', 'name -password')
+      .populate('author', 'name')
       .sort({ createdAt: -1 })
       .limit(FEED_LIMIT)
       .lean();

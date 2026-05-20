@@ -25,8 +25,8 @@ export async function createTeam(
     });
 
     const populated = await TeamGroup.findById(team._id)
-      .populate('members', 'name email -password')
-      .populate('createdBy', 'name email -password');
+      .populate('members', 'name email')
+      .populate('createdBy', 'name email');
 
     sendSuccess(res, 'Team created', populated, 201);
   } catch (err) {
@@ -43,8 +43,8 @@ export async function getMyTeams(
 ): Promise<void> {
   try {
     const teams = await TeamGroup.find({ members: req.userId })
-      .populate('members', 'name email -password')
-      .populate('createdBy', 'name email -password')
+      .populate('members', 'name email')
+      .populate('createdBy', 'name email')
       .sort({ createdAt: -1 });
 
     sendSuccess(res, 'Teams retrieved', teams);
@@ -62,8 +62,8 @@ export async function getTeam(
 ): Promise<void> {
   try {
     const team = await TeamGroup.findById(req.params.id)
-      .populate('members', 'name email overall level rank -password')
-      .populate('createdBy', 'name email -password');
+      .populate('members', 'name email overall level rank')
+      .populate('createdBy', 'name email');
 
     if (!team) throw new AppError('Team not found', 404);
 
@@ -99,8 +99,8 @@ export async function updateTeam(
     await team.save();
 
     const populated = await TeamGroup.findById(team._id)
-      .populate('members', 'name email -password')
-      .populate('createdBy', 'name email -password');
+      .populate('members', 'name email')
+      .populate('createdBy', 'name email');
 
     sendSuccess(res, 'Team updated', populated);
   } catch (err) {
@@ -158,8 +158,8 @@ export async function addMember(
     await team.save();
 
     const populated = await TeamGroup.findById(team._id)
-      .populate('members', 'name email overall level rank -password')
-      .populate('createdBy', 'name email -password');
+      .populate('members', 'name email overall level rank')
+      .populate('createdBy', 'name email');
 
     sendSuccess(res, 'Member added', populated);
   } catch (err) {

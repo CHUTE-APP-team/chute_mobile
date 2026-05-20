@@ -145,8 +145,8 @@ export async function joinMatch(
     await match.save();
 
     const populated = await Match.findById(match._id)
-      .populate('players', 'name overall -password')
-      .populate('teams.players', 'name overall -password');
+      .populate('players', 'name overall')
+      .populate('teams.players', 'name overall');
 
     sendSuccess(res, 'Joined match', populated);
   } catch (err) {
@@ -188,7 +188,7 @@ export async function generateMatchTeams(
     await match.save();
 
     const populated = await Match.findById(match._id)
-      .populate('teams.players', 'name overall -password');
+      .populate('teams.players', 'name overall');
 
     sendSuccess(res, 'Times gerados com sucesso', { teams: populated!.teams });
   } catch (err) {
@@ -408,8 +408,8 @@ export async function getMatchTeams(
 ): Promise<void> {
   try {
     const match = await Match.findById(req.params.id)
-      .populate('players', 'name overall -password')
-      .populate('teams.players', 'name overall -password');
+      .populate('players', 'name overall')
+      .populate('teams.players', 'name overall');
 
     if (!match) throw new AppError('Match not found', 404);
 
