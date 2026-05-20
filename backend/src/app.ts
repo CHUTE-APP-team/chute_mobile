@@ -5,6 +5,7 @@ import authRoutes from './routes/authRoutes';
 import usersRoutes from './routes/usersRoutes';
 import matchRoutes from './routes/matchRoutes';
 import teamRoutes from './routes/teamRoutes';
+import postRoutes from './routes/postRoutes';
 import { loggerMiddleware } from './middlewares/loggerMiddleware';
 import { errorMiddleware } from './middlewares/errorMiddleware';
 
@@ -29,6 +30,7 @@ app.use('/auth', authRoutes);
 app.use('/users', usersRoutes);
 app.use('/matches', matchRoutes);
 app.use('/teams', teamRoutes);
+app.use('/posts', postRoutes);
 
 app.use(errorMiddleware);
 

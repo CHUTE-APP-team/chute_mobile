@@ -15,6 +15,7 @@ import { router } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "@/src/context/AuthContext";
 import { getMatches, joinMatch, Match } from "@/src/services/matchService";
+import { getMyTeams, Team } from "@/src/services/teamService";
 import { colors } from "@/src/theme/colors";
 import MatchCard from "@/src/components/MatchCard";
 import Logo from "@/src/components/Logo";
@@ -270,29 +271,31 @@ const sec = StyleSheet.create({
 export default function HomeScreen() {
   const { user } = useAuth();
   const [matches, setMatches] = useState<Match[]>([]);
+  const [teams, setTeams]     = useState<Team[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [joiningId, setJoiningId] = useState<string | null>(null);
 
-  async function fetchMatches(silent = false) {
+  async function fetchAll(silent = false) {
     if (!silent) setIsLoading(true);
     try {
-      const data = await getMatches();
-      setMatches(Array.isArray(data) ? data : []);
+      const [matchData, teamData] = await Promise.all([getMatches(), getMyTeams()]);
+      setMatches(Array.isArray(matchData) ? matchData : []);
+      setTeams(Array.isArray(teamData) ? teamData : []);
     } catch (err) {
-      console.error("[HomeScreen] failed to fetch matches:", err);
-      Alert.alert("Erro", "Não foi possível carregar as partidas.");
+      console.error("[HomeScreen] failed to fetch:", err);
+      Alert.alert("Erro", "Não foi possível carregar os dados.");
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
   }
 
-  useFocusEffect(useCallback(() => { fetchMatches(); }, []));
+  useFocusEffect(useCallback(() => { fetchAll(); }, []));
 
   function handleRefresh() {
     setIsRefreshing(true);
-    fetchMatches(true);
+    fetchAll(true);
   }
 
   async function handleJoin(matchId: string) {
@@ -364,6 +367,53 @@ export default function HomeScreen() {
             <HeroCard match={heroMatch} userId={user?.id} isJoining={joiningId === heroMatch._id} onJoin={handleJoin} />
           )}
 
+          {/* ── Seus times ─────────────────────────────────────── */}
+          <View style={styles.section}>
+            <View style={styles.sectionRow}>
+              <SectionHeader label="Seus times" />
+              <TouchableOpacity onPress={() => router.push("/(tabs)/teams")} activeOpacity={0.7}>
+                <Text style={styles.seeAll}>Ver todos</Text>
+              </TouchableOpacity>
+            </View>
+            {teams.length === 0 ? (
+              <TouchableOpacity style={styles.emptyTeamsCard} onPress={() => router.push("/(tabs)/teams")} activeOpacity={0.8}>
+                <Text style={styles.emptyTeamsText}>👥 Crie ou entre em um time</Text>
+              </TouchableOpacity>
+            ) : (
+              <FlatList
+                horizontal
+                data={teams}
+                keyExtractor={(t) => t._id}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.hList}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.teamChip}
+                    onPress={() => router.push(`/team/${item._id}` as any)}
+                    activeOpacity={0.82}
+                  >
+                    <Text style={styles.teamChipName} numberOfLines={1}>{item.name}</Text>
+                    <Text style={styles.teamChipMeta}>
+                      {item.members.length} {item.members.length === 1 ? "membro" : "membros"}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+          </View>
+
+          {/* ── Suas estatísticas ──────────────────────────────── */}
+          {user && (
+            <View style={styles.section}>
+              <SectionHeader label="Suas estatísticas" />
+              <View style={styles.statsGrid}>
+                <StatCard label="Overall" value={String(user.overall ?? 70)} icon="⚡" />
+                <StatCard label="Partidas" value={String(user.totalMatches ?? 0)} icon="⚽" />
+                <StatCard label={`Nível ${user.level ?? 1}`} value={`${user.xp ?? 0} XP`} icon="🏅" />
+              </View>
+            </View>
+          )}
+
           {upcomingMatches.length > 0 && (
             <View style={styles.section}>
               <SectionHeader label="Próximas partidas" />
@@ -397,6 +447,23 @@ export default function HomeScreen() {
   );
 }
 
+function StatCard({ label, value, icon }: { label: string; value: string; icon: string }) {
+  return (
+    <View style={stat.card}>
+      <Text style={stat.icon}>{icon}</Text>
+      <Text style={stat.value}>{value}</Text>
+      <Text style={stat.label}>{label}</Text>
+    </View>
+  );
+}
+
+const stat = StyleSheet.create({
+  card:  { flex: 1, backgroundColor: theme.card, borderRadius: 14, padding: 14, alignItems: "center", borderWidth: 1, borderColor: theme.border, gap: 4 },
+  icon:  { fontSize: 20 },
+  value: { fontSize: 18, fontWeight: "800", color: theme.text },
+  label: { fontSize: 11, color: theme.textMuted, fontWeight: "600", textAlign: "center" },
+});
+
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.background, paddingTop: 56 },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, marginBottom: 4 },
@@ -404,7 +471,17 @@ const styles = StyleSheet.create({
   createButton: { backgroundColor: theme.primary, paddingVertical: 9, paddingHorizontal: 18, borderRadius: 50 },
   createButtonText: { color: theme.textOnPrimary, fontWeight: "bold", fontSize: 13 },
   scroll: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 48 },
-  section: { marginBottom: 8 },
+  section: { marginBottom: 16 },
+  sectionRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  seeAll: { fontSize: 12, color: theme.primary, fontWeight: "600", marginBottom: 12 },
   hList: { paddingRight: 4 },
   hCard: { width: 280, marginRight: 12 },
+  // Teams
+  emptyTeamsCard: { backgroundColor: theme.card, borderRadius: 14, padding: 16, alignItems: "center", borderWidth: 1, borderColor: theme.border, borderStyle: "dashed" },
+  emptyTeamsText: { fontSize: 14, color: theme.textMuted, fontWeight: "600" },
+  teamChip: { backgroundColor: theme.card, borderRadius: 14, padding: 14, marginRight: 10, borderWidth: 1, borderColor: theme.border, minWidth: 120, maxWidth: 160 },
+  teamChipName: { fontSize: 14, fontWeight: "700", color: theme.text, marginBottom: 4 },
+  teamChipMeta: { fontSize: 11, color: theme.textMuted },
+  // Stats
+  statsGrid: { flexDirection: "row", gap: 10 },
 });

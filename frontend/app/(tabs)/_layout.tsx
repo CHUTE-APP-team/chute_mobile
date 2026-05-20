@@ -55,6 +55,15 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="social"
+        options={{
+          title: "Social",
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon emoji="💬" color={color} focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="ranking"
         options={{
           title: "Ranking",
