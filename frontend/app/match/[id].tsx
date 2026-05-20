@@ -20,8 +20,10 @@ import {
   getMatch,
   joinMatchDetail,
   generateTeams,
+  drawTeams,
   MatchDetail,
   Team,
+  DrawnTeam,
 } from "../../src/services/matchService";
 import { inviteToMatch, leaveMatch } from "../../src/services/inviteService";
 import { colors } from "../../src/theme/colors";
@@ -40,6 +42,8 @@ export default function MatchDetailsScreen() {
   const [isJoining, setIsJoining]       = useState(false);
   const [isLeaving, setIsLeaving]       = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isDrawing, setIsDrawing]       = useState(false);
+  const [drawnTeams, setDrawnTeams]     = useState<{ teamA: DrawnTeam; teamB: DrawnTeam } | null>(null);
   const [inviteModalVisible, setInviteModalVisible] = useState(false);
   const [inviteEmail, setInviteEmail]   = useState('');
   const [isSendingInvite, setIsSendingInvite] = useState(false);
@@ -128,6 +132,53 @@ export default function MatchDetailsScreen() {
     } finally {
       setIsGenerating(false);
     }
+  }
+
+  function handleDrawTeams() {
+    if (!match) return;
+    const count = match.players.length;
+    if (count < 2) {
+      Alert.alert("Jogadores insuficientes", "São necessários ao menos 2 jogadores para sortear os times.");
+      return;
+    }
+    Alert.alert(
+      "Sortear times agora?",
+      `Isso dividirá os ${count} participante${count !== 1 ? "s" : ""} em dois times balanceados.`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Sortear",
+          onPress: async () => {
+            setIsDrawing(true);
+            try {
+              const result = await drawTeams(match._id);
+              setDrawnTeams(result);
+              // Sync match state so the TeamsSection also updates
+              setMatch((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      teams: [
+                        { name: result.teamA.name, players: result.teamA.players, totalOverall: result.teamA.totalOverall },
+                        { name: result.teamB.name, players: result.teamB.players, totalOverall: result.teamB.totalOverall },
+                      ],
+                      teamsGeneratedAt: new Date().toISOString(),
+                    }
+                  : prev
+              );
+            } catch (err) {
+              const message =
+                axios.isAxiosError(err) && err.response?.data?.message
+                  ? err.response.data.message
+                  : "Erro ao sortear os times.";
+              Alert.alert("Erro", message);
+            } finally {
+              setIsDrawing(false);
+            }
+          },
+        },
+      ]
+    );
   }
 
   async function handleSendInvite() {
@@ -274,6 +325,31 @@ export default function MatchDetailsScreen() {
                 )}
               </TouchableOpacity>
             )}
+
+            {/* ── Draw Teams ──────────────────────────────── */}
+            {owner && match.players.length >= 2 && (
+              <View style={styles.drawSection}>
+                <TouchableOpacity
+                  style={[styles.drawButton, isDrawing && styles.drawButtonDisabled]}
+                  onPress={handleDrawTeams}
+                  disabled={isDrawing}
+                  activeOpacity={0.85}
+                >
+                  {isDrawing ? (
+                    <ActivityIndicator color={theme.textOnPrimary} />
+                  ) : (
+                    <Text style={styles.drawButtonText}>🎲 Sortear Times</Text>
+                  )}
+                </TouchableOpacity>
+
+                {drawnTeams && (
+                  <View style={styles.drawnTeamsRow}>
+                    <DrawnTeamCard team={drawnTeams.teamA} accentColor={TEAM_A_COLOR} />
+                    <DrawnTeamCard team={drawnTeams.teamB} accentColor={TEAM_B_COLOR} />
+                  </View>
+                )}
+              </View>
+            )}
           </>
         )}
 
@@ -392,6 +468,26 @@ export default function MatchDetailsScreen() {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
+// ─── Drawn Team Card ──────────────────────────────────────────────────────────
+
+function DrawnTeamCard({ team, accentColor }: { team: DrawnTeam; accentColor: string }) {
+  return (
+    <View style={[styles.drawnCard, { borderTopColor: accentColor }]}>
+      <View style={[styles.drawnCardHeader, { backgroundColor: accentColor }]}>
+        <Text style={styles.drawnCardName}>{team.name}</Text>
+        <Text style={styles.drawnCardOverall}>OVR {team.totalOverall}</Text>
+      </View>
+      {team.players.map((player, index) => (
+        <View key={String(player._id)} style={styles.drawnPlayerRow}>
+          <Text style={styles.drawnPlayerIndex}>{index + 1}</Text>
+          <Text style={styles.drawnPlayerName} numberOfLines={1}>{player.name}</Text>
+          <Text style={[styles.drawnPlayerOverall, { color: accentColor }]}>{player.overall}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function TeamsSection({ teams }: { teams: Team[] }) {
   const [teamA, teamB] = teams;
   return (
@@ -489,6 +585,20 @@ const styles = StyleSheet.create({
   joinButtonDisabled: { backgroundColor: theme.disabled },
   leaveButton:  { backgroundColor: "#C53030" },
   joinButtonText: { color: theme.textOnPrimary, fontWeight: "bold", fontSize: 16 },
+  // Draw Teams
+  drawSection:   { marginTop: 20, gap: 14 },
+  drawButton:    { backgroundColor: "#6B21A8", padding: 14, borderRadius: 50, alignItems: "center" },
+  drawButtonDisabled: { backgroundColor: theme.disabled },
+  drawButtonText: { color: "#FFFFFF", fontWeight: "bold", fontSize: 15 },
+  drawnTeamsRow: { flexDirection: "row", gap: 10 },
+  drawnCard:     { flex: 1, backgroundColor: theme.card, borderRadius: 14, overflow: "hidden", borderWidth: 1, borderColor: theme.border, borderTopWidth: 3 },
+  drawnCardHeader: { paddingHorizontal: 12, paddingVertical: 8, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  drawnCardName: { fontSize: 13, fontWeight: "800", color: "#FFFFFF" },
+  drawnCardOverall: { fontSize: 11, color: "rgba(255,255,255,0.85)", fontWeight: "700" },
+  drawnPlayerRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 10, paddingVertical: 7, borderTopWidth: 1, borderTopColor: theme.border, gap: 6 },
+  drawnPlayerIndex: { fontSize: 11, color: theme.textMuted, width: 14, textAlign: "center" },
+  drawnPlayerName: { flex: 1, fontSize: 13, color: theme.text, fontWeight: "500" },
+  drawnPlayerOverall: { fontSize: 12, fontWeight: "800" },
   // Modal
   modalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.55)" },
   modalSheet:   { backgroundColor: theme.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 28, paddingBottom: 40, gap: 10 },

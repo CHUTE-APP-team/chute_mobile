@@ -196,6 +196,59 @@ export async function generateMatchTeams(
   }
 }
 
+// ─── Draw Teams (snake draft) ─────────────────────────────────────────────────
+// POST /matches/:id/draw-teams
+// Sorts confirmed players by overall DESC, distributes via snake draft (A B B A…),
+// persists teams on the match, and returns both teams with player details.
+
+export async function drawTeams(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const match = await Match.findById(req.params.id);
+    if (!match) throw new AppError('Match not found', 404);
+    if (match.createdBy.toString() !== req.userId) {
+      throw new AppError('Only the organizer can draw teams', 403);
+    }
+    if (match.status === 'finished') throw new AppError('Match is already finished', 400);
+    if (match.players.length < 2) {
+      throw new AppError('At least 2 players are required to draw teams', 400);
+    }
+
+    const playersWithOverall = await User.find(
+      { _id: { $in: match.players } },
+      { _id: 1, name: 1, overall: 1 }
+    ).lean() as { _id: Types.ObjectId; name: string; overall: number }[];
+
+    const [teamA, teamB] = generateBalancedTeams(playersWithOverall);
+
+    match.teams = [teamA, teamB];
+    match.teamsGeneratedAt = new Date();
+    await match.save();
+
+    // Build response with full player details
+    const playerMap = new Map(playersWithOverall.map((p) => [p._id.toString(), p]));
+
+    const buildDetail = (team: typeof teamA) => ({
+      name: team.name,
+      totalOverall: team.totalOverall,
+      players: team.players.map((id) => {
+        const p = playerMap.get(id.toString());
+        return { _id: id, name: p?.name ?? '—', overall: p?.overall ?? 0 };
+      }),
+    });
+
+    sendSuccess(res, 'Teams drawn', {
+      teamA: buildDetail(teamA),
+      teamB: buildDetail(teamB),
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 // ─── Invite User to Match ─────────────────────────────────────────────────────
 // POST /matches/:id/invite  — only organizer; looks up user by email
 

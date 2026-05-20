@@ -83,3 +83,14 @@ export interface RatePlayerPayload {
 export async function ratePlayer(matchId: string, payload: RatePlayerPayload): Promise<void> {
   await api.post(`/matches/${matchId}/rate`, payload);
 }
+
+export interface DrawnTeam {
+  name: string;
+  totalOverall: number;
+  players: Player[];
+}
+
+export async function drawTeams(matchId: string): Promise<{ teamA: DrawnTeam; teamB: DrawnTeam }> {
+  const response = await api.post(`/matches/${matchId}/draw-teams`);
+  return response.data.data as { teamA: DrawnTeam; teamB: DrawnTeam };
+}
