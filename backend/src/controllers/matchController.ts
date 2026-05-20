@@ -128,6 +128,8 @@ export async function joinMatch(
     if (match.players.length >= match.maxPlayers) throw new AppError('Match is full', 400);
 
     match.players.push(new Types.ObjectId(userId));
+    // Remove from invites if they were invited
+    match.invites = match.invites.filter((i) => i.toString() !== userId) as typeof match.invites;
 
     if (shouldAutoGenerateTeams(match.players.length, MIN_PLAYERS_FOR_TEAMS)) {
       const playersWithOverall = await User.find(
@@ -189,6 +191,98 @@ export async function generateMatchTeams(
       .populate('teams.players', 'name overall -password');
 
     sendSuccess(res, 'Times gerados com sucesso', { teams: populated!.teams });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── Invite User to Match ─────────────────────────────────────────────────────
+// POST /matches/:id/invite  — only organizer; looks up user by email
+
+export async function inviteToMatch(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const match = await Match.findById(req.params.id);
+    if (!match) throw new AppError('Match not found', 404);
+    if (match.createdBy.toString() !== req.userId) {
+      throw new AppError('Only the organizer can invite players', 403);
+    }
+    if (match.status === 'finished') throw new AppError('Match is already finished', 400);
+
+    const { email } = req.body;
+    if (!email?.trim()) throw new AppError('Email is required', 400);
+
+    const target = await User.findOne({ email: email.trim().toLowerCase() }).select('_id name email');
+    if (!target) throw new AppError('No user found with that email', 404);
+
+    const targetId = target._id as Types.ObjectId;
+    const alreadyPlayer = match.players.some((p) => p.equals(targetId));
+    if (alreadyPlayer) throw new AppError('User is already in the match', 400);
+
+    const alreadyInvited = match.invites.some((i) => i.equals(targetId));
+    if (alreadyInvited) throw new AppError('User is already invited', 400);
+
+    match.invites.push(targetId);
+    await match.save();
+
+    sendSuccess(res, 'Invite sent', { invitedUser: { _id: target._id, name: target.name, email: target.email } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── Leave Match ──────────────────────────────────────────────────────────────
+// POST /matches/:id/leave
+
+export async function leaveMatch(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const match = await Match.findById(req.params.id);
+    if (!match) throw new AppError('Match not found', 404);
+    if (match.status === 'finished') throw new AppError('Match is already finished', 400);
+
+    const userId = req.userId as string;
+    const inPlayers = match.players.some((p) => p.toString() === userId);
+    const inInvites = match.invites.some((i) => i.toString() === userId);
+
+    if (!inPlayers && !inInvites) throw new AppError('You are not in this match', 400);
+    if (match.createdBy.toString() === userId) throw new AppError('The organizer cannot leave the match', 400);
+
+    match.players = match.players.filter((p) => p.toString() !== userId) as typeof match.players;
+    match.invites = match.invites.filter((i) => i.toString() !== userId) as typeof match.invites;
+    await match.save();
+
+    sendSuccess(res, 'You left the match', null);
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── List My Pending Invites ──────────────────────────────────────────────────
+// GET /matches/my-invites
+
+export async function getMyInvites(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const matches = await Match.find({
+      invites: req.userId,
+      status: 'open',
+    })
+      .select('title location date maxPlayers players createdBy invites')
+      .populate('createdBy', 'name')
+      .sort({ date: 1 })
+      .lean();
+
+    sendSuccess(res, 'Pending invites retrieved', matches);
   } catch (err) {
     next(err);
   }

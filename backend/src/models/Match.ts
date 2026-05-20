@@ -24,6 +24,7 @@ export interface IMatch extends Document {
   date: Date;
   maxPlayers: number;
   players: Types.ObjectId[];
+  invites: Types.ObjectId[];
   createdBy: Types.ObjectId;
   teams: ITeam[];
   teamsGeneratedAt?: Date;
@@ -69,6 +70,13 @@ const MatchSchema: Schema = new Schema<IMatch>(
       {
         type: Schema.Types.ObjectId,
         ref: 'User',
+      },
+    ],
+    invites: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+        default: [],
       },
     ],
     createdBy: {

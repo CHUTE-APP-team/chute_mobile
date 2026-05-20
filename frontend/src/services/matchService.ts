@@ -27,6 +27,7 @@ export interface Match {
 
 export interface MatchDetail extends Omit<Match, 'players'> {
   players: Player[];
+  invites: string[];
 }
 
 export interface CreateMatchData {
