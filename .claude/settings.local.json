@@ -6,7 +6,15 @@
       "Bash(ipconfig)",
       "Bash(eas --version)",
       "Bash(ls frontend/src/)",
-      "Bash(ls backend/src/)"
+      "Bash(ls backend/src/)",
+      "Bash(eas whoami *)",
+      "Bash(eas build *)",
+      "Bash(eas build:view 14e2d2ea-2014-4747-b54f-799b8b427ea3)",
+      "Bash(eas build:view 14e2d2ea-2014-4747-b54f-799b8b427ea3 --json)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d.get\\('error','no error field'\\)\\)\")",
+      "Bash(node -e \"let d=''; process.stdin.on\\('data',c=>d+=c\\); process.stdin.on\\('end',\\(\\)=>{ try{ const o=JSON.parse\\(d\\); console.log\\(JSON.stringify\\(o.error||o.buildPhaseErrorMessage||'no error',null,2\\)\\); }catch\\(e\\){console.log\\(d.slice\\(-2000\\)\\);} }\\)\")",
+      "Bash(curl -s \"https://job-logs.eascdn.net/production/14e2d2ea-2014-4747-b54f-799b8b427ea3/1776298936648-613873b9-63bf-4f9d-9778-061899791ffe.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260416%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260416T003824Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=592bff2ced10d2de983a2ca378f2a5ba7aadd9990dda634ebaf6868199cc3d361c322df24af465ea2790ebc8fdce187893137d02896b78495f5372e633f905399018990fe1dec4cfdd11d25569045f0642046fa6a0be9a7ee247d7cc72e08f4fc2bf868ef837637af8dd0c8b142f7c34f65a09d5330bcf6bc532c1a06ee64854223ff9a332fb4a0741000d8dcefb66329395657304c2a1b0483c02924a2239f9f0228cece2e77217150c41aca3045c508b85a07d422366b4dfa9d112bde977a6c6a45c17dc7a3b7a3437c7038c2fafa33a735079137b2bb98933a7a2c880eb8d451661ce24b084bb5185a287411aa011c9e60c9d7eb47bb4e753e55284749324\")",
+      "Bash(node -e \"const p=require\\('./node_modules/@react-native-async-storage/async-storage/package.json'\\); console.log\\(p.version\\)\")"
     ]
   }
 }
