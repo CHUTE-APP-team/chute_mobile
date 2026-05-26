@@ -76,6 +76,20 @@ export default function TeamsTab() {
         </TouchableOpacity>
       </View>
 
+      {/* Quadras shortcut */}
+      <TouchableOpacity
+        style={styles.courtsCard}
+        onPress={() => router.push('/courts' as any)}
+        activeOpacity={0.82}
+      >
+        <Text style={{ fontSize: 22 }}>🏟️</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 14, fontWeight: '700', color: theme.text }}>Quadras</Text>
+          <Text style={{ fontSize: 12, color: theme.textMuted }}>Gerenciar locais de jogo</Text>
+        </View>
+        <Text style={{ fontSize: 18, color: theme.textMuted }}>›</Text>
+      </TouchableOpacity>
+
       {loading ? (
         <View style={styles.centered}>
           <ActivityIndicator color={theme.primary} size="large" />
@@ -203,6 +217,7 @@ const styles = StyleSheet.create({
   emptyText:   { fontSize: 15, color: theme.textMuted, textAlign: 'center', marginBottom: 24, lineHeight: 22 },
   emptyBtn:    { backgroundColor: theme.primary, paddingVertical: 12, paddingHorizontal: 28, borderRadius: 50 },
   emptyBtnText: { color: theme.textOnPrimary, fontWeight: '700', fontSize: 14 },
+  courtsCard:  { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: theme.card, borderRadius: 10, padding: 14, marginHorizontal: 16, marginBottom: 12, borderWidth: 1, borderColor: theme.border },
   // Modal
   modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.55)' },
   modalSheet:  { backgroundColor: theme.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 28, paddingBottom: 40, gap: 10 },

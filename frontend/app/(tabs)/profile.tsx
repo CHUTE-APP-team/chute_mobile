@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { rateUserStars } from '@/src/services/drawService';
 import {
   Alert,
   Animated,
@@ -28,6 +29,18 @@ const RANK_CONFIG: Record<Rank, { color: string; icon: string }> = {
   Ouro:   { color: '#FFD700', icon: '⭐' },
   Elite:  { color: '#FF6A00', icon: '🔥' },
 };
+
+function StarDisplay({ value, size = 20 }: { value: number; size?: number }) {
+  return (
+    <View style={{ flexDirection: 'row', gap: 2 }}>
+      {[1, 2, 3, 4, 5].map((s) => (
+        <Text key={s} style={{ fontSize: size, color: value >= s ? '#FFB800' : '#CCCCCC' }}>
+          ★
+        </Text>
+      ))}
+    </View>
+  );
+}
 
 function xpForNextLevel(level: number): number {
   return level * 100;
@@ -281,10 +294,18 @@ export default function ProfileScreen() {
           <Text style={styles.xpHint}>{nextLevelXp - (user.xp - baseXp)} XP para o próximo nível</Text>
         </View>
 
+        {/* Stars display */}
+        <View style={[styles.ratingCard, { marginTop: 0, marginBottom: 12 }]}>
+          <Text style={styles.ratingCardTitle}>Reputação pública</Text>
+          <StarDisplay value={user.stars ?? 3} size={28} />
+          <Text style={{ fontSize: 12, color: theme.textMuted, marginTop: 4 }}>
+            {(user.stars ?? 3).toFixed(0)} estrela{(user.stars ?? 3) !== 1 ? 's' : ''} · {user.starRatingsCount ?? 0} avaliação{(user.starRatingsCount ?? 0) !== 1 ? 'ões' : ''}
+          </Text>
+        </View>
+
         <View style={styles.statsRow}>
-          <StatBox label="Overall" value={String(stats?.overall ?? user.overall)} />
-          <StatBox label="Level"   value={String(user.level)} />
-          <StatBox label="XP"      value={String(user.xp)} />
+          <StatBox label="Level" value={String(user.level)} />
+          <StatBox label="XP"    value={String(user.xp)} />
         </View>
 
         <View style={styles.ratingCard}>

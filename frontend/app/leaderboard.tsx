@@ -129,12 +129,17 @@ function RankingRow({
         </Text>
       </View>
 
-      {/* Overall */}
+      {/* Stars */}
       <View style={[styles.overallBox, isTop3 && { borderColor: top3.border }]}>
-        <Text style={[styles.overallNum, isCurrentUser && { color: theme.primary }]}>
-          {entry.overall}
-        </Text>
-        <Text style={styles.overallLabel}>OVR</Text>
+        {[1, 2, 3, 4, 5].map((s) => (
+          <Text
+            key={s}
+            style={{ fontSize: 10, color: (entry.stars ?? 3) >= s ? '#FFB800' : '#CCCCCC', lineHeight: 12 }}
+          >
+            ★
+          </Text>
+        ))}
+        <Text style={styles.overallLabel}>{(entry.stars ?? 3)}★</Text>
       </View>
     </View>
   );

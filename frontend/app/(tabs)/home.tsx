@@ -363,6 +363,24 @@ export default function HomeScreen() {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll} refreshControl={refreshControl} nestedScrollEnabled>
           <Text style={styles.greeting}>{greeting}</Text>
 
+          {/* Ações rápidas */}
+          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
+            <TouchableOpacity
+              style={{ flex: 1, backgroundColor: theme.card, borderRadius: 10, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: theme.border }}
+              onPress={() => router.push('/draw-teams' as any)}
+            >
+              <Text style={{ fontSize: 22 }}>🎲</Text>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: theme.text, marginTop: 4 }}>Sortear Times</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{ flex: 1, backgroundColor: theme.card, borderRadius: 10, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: theme.border }}
+              onPress={() => router.push('/stats' as any)}
+            >
+              <Text style={{ fontSize: 22 }}>📊</Text>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: theme.text, marginTop: 4 }}>Estatísticas</Text>
+            </TouchableOpacity>
+          </View>
+
           {heroMatch && (
             <HeroCard match={heroMatch} userId={user?.id} isJoining={joiningId === heroMatch._id} onJoin={handleJoin} />
           )}
@@ -407,7 +425,7 @@ export default function HomeScreen() {
             <View style={styles.section}>
               <SectionHeader label="Suas estatísticas" />
               <View style={styles.statsGrid}>
-                <StatCard label="Overall" value={String(user.overall ?? 70)} icon="⚡" />
+                <StatCard label="Estrelas" value={`${user.stars ?? 3}★`} icon="⭐" />
                 <StatCard label="Partidas" value={String(user.totalMatches ?? 0)} icon="⚽" />
                 <StatCard label={`Nível ${user.level ?? 1}`} value={`${user.xp ?? 0} XP`} icon="🏅" />
               </View>

@@ -8,7 +8,9 @@ export interface UserProfile {
   name: string;
   email: string;
   role: UserRole;
-  overall: number;
+  stars: number;
+  starRatingsCount: number;
+  starRatingsSum?: number;
   xp: number;
   level: number;
   rank: Rank;
@@ -19,7 +21,8 @@ export interface UserProfile {
 export interface PlayerStats {
   _id: string;
   name: string;
-  overall: number;
+  stars: number;
+  starRatingsCount: number;
   averageRating: number;
   totalMatches: number;
   xp: number;

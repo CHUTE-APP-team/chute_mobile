@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   ScrollView,
   Platform,
   ActivityIndicator,
+  Modal,
+  FlatList,
 } from "react-native";
 import DateTimePicker, {
   DateTimePickerEvent,
@@ -17,6 +19,12 @@ import { router } from "expo-router";
 import axios from "axios";
 import { createMatch } from "@/src/services/matchService";
 import { colors } from "@/src/theme/colors";
+import {
+  listCourts,
+  Court,
+  MODALITY_LABELS,
+  MODALITY_ICONS,
+} from "@/src/services/courtService";
 
 const theme = colors;
 
@@ -31,8 +39,15 @@ export default function CreateMatchScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
-  const locationRef = useRef<TextInput>(null);
+  const [courts, setCourts] = useState<Court[]>([]);
+  const [selectedCourt, setSelectedCourt] = useState<Court | null>(null);
+  const [showCourtPicker, setShowCourtPicker] = useState(false);
+
   const maxPlayersRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    listCourts().then(setCourts).catch(() => {});
+  }, []);
 
   function onDateChange(event: DateTimePickerEvent, selected?: Date) {
     if (event.type === "dismissed") {
@@ -73,7 +88,7 @@ export default function CreateMatchScreen() {
 
   function validate(): string | null {
     if (!title.trim()) return "Informe o título da partida.";
-    if (!location.trim()) return "Informe o local da partida.";
+    if (!selectedCourt && !location.trim()) return "Selecione uma quadra ou informe o local.";
     const players = parseInt(maxPlayers, 10);
     if (!maxPlayers.trim() || isNaN(players) || players < 2)
       return "Número de jogadores deve ser pelo menos 2.";
@@ -91,7 +106,10 @@ export default function CreateMatchScreen() {
     try {
       await createMatch({
         title: title.trim(),
-        location: location.trim(),
+        location: selectedCourt
+          ? `${selectedCourt.name} — ${selectedCourt.address}`
+          : location.trim(),
+        courtId: selectedCourt?._id,
         date: date.toISOString(),
         maxPlayers: parseInt(maxPlayers, 10),
       });
@@ -132,20 +150,49 @@ export default function CreateMatchScreen() {
           onChangeText={setTitle}
           autoFocus
           returnKeyType="next"
-          onSubmitEditing={() => locationRef.current?.focus()}
         />
 
-        <Text style={styles.label}>Local</Text>
-        <TextInput
-          ref={locationRef}
-          style={styles.input}
-          placeholder="Ex: Quadra do Parque"
-          placeholderTextColor={theme.textMuted}
-          value={location}
-          onChangeText={setLocation}
-          returnKeyType="next"
-          onSubmitEditing={() => maxPlayersRef.current?.focus()}
-        />
+        {/* Court / Location selector */}
+        <Text style={styles.label}>Quadra / Local</Text>
+        <TouchableOpacity
+          style={styles.courtSelector}
+          onPress={() => setShowCourtPicker(true)}
+          activeOpacity={0.75}
+        >
+          {selectedCourt ? (
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: theme.text }}>
+                {MODALITY_ICONS[selectedCourt.modality]} {selectedCourt.name}
+              </Text>
+              <Text style={{ fontSize: 12, color: theme.textMuted, marginTop: 2 }}>
+                {selectedCourt.address} · {MODALITY_LABELS[selectedCourt.modality]}
+              </Text>
+            </View>
+          ) : (
+            <Text style={{ color: theme.textMuted, flex: 1 }}>
+              Selecionar quadra cadastrada...
+            </Text>
+          )}
+          <Text style={{ fontSize: 20, color: theme.textMuted }}>›</Text>
+        </TouchableOpacity>
+
+        {selectedCourt && (
+          <TouchableOpacity onPress={() => setSelectedCourt(null)} style={{ marginTop: 4, marginBottom: 4 }}>
+            <Text style={{ fontSize: 12, color: theme.error }}>✕ Usar local livre em vez disso</Text>
+          </TouchableOpacity>
+        )}
+
+        {!selectedCourt && (
+          <TextInput
+            style={[styles.input, { marginTop: 8 }]}
+            value={location}
+            onChangeText={setLocation}
+            placeholder="Ou digite o local manualmente"
+            placeholderTextColor={theme.textMuted}
+            returnKeyType="next"
+            onSubmitEditing={() => maxPlayersRef.current?.focus()}
+          />
+        )}
 
         <Text style={styles.label}>Data e hora</Text>
         <TouchableOpacity
@@ -225,6 +272,62 @@ export default function CreateMatchScreen() {
           )}
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Court Picker Modal */}
+      <Modal
+        visible={showCourtPicker}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowCourtPicker(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: theme.background }}>
+          <View style={{
+            flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+            padding: 16, borderBottomWidth: 1, borderBottomColor: theme.border,
+            backgroundColor: theme.card,
+          }}>
+            <Text style={{ fontSize: 18, fontWeight: "800", color: theme.primary }}>
+              Selecionar Quadra
+            </Text>
+            <TouchableOpacity onPress={() => setShowCourtPicker(false)}>
+              <Text style={{ color: theme.textMuted, fontSize: 20, padding: 4 }}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={courts}
+            keyExtractor={(c) => c._id}
+            contentContainerStyle={{ padding: 16, gap: 10 }}
+            ListEmptyComponent={
+              <Text style={{ color: theme.textMuted, textAlign: "center", marginTop: 40 }}>
+                Nenhuma quadra cadastrada.{"\n"}Acesse Menu → Quadras para cadastrar.
+              </Text>
+            }
+            renderItem={({ item: court }) => (
+              <TouchableOpacity
+                style={{
+                  backgroundColor: selectedCourt?._id === court._id
+                    ? "rgba(255,106,0,0.08)" : theme.card,
+                  borderRadius: 10,
+                  padding: 14,
+                  borderWidth: 1,
+                  borderColor: selectedCourt?._id === court._id ? theme.primary : theme.border,
+                }}
+                onPress={() => { setSelectedCourt(court); setShowCourtPicker(false); }}
+              >
+                <Text style={{ fontSize: 15, fontWeight: "700", color: theme.text }}>
+                  {MODALITY_ICONS[court.modality]} {court.name}
+                </Text>
+                <Text style={{ fontSize: 12, color: theme.textMuted, marginTop: 2 }}>
+                  {court.address}
+                </Text>
+                <Text style={{ fontSize: 11, color: theme.primary, fontWeight: "600", marginTop: 2 }}>
+                  {MODALITY_LABELS[court.modality]}
+                </Text>
+              </TouchableOpacity>
+            )}
+          />
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -276,6 +379,18 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: theme.text,
     marginBottom: 18,
+  },
+  courtSelector: {
+    backgroundColor: theme.card,
+    borderWidth: 1.5,
+    borderColor: theme.borderWarm,
+    borderRadius: 14,
+    padding: 14,
+    paddingHorizontal: 18,
+    marginBottom: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   dateButton: {
     flexDirection: "row",

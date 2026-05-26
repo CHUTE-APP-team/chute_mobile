@@ -5,7 +5,8 @@ export interface RankingEntry {
   position: number;
   _id: string;
   name: string;
-  overall: number;
+  stars: number;
+  starRatingsCount: number;
   averageRating: number;
   totalMatches: number;
   xp: number;
@@ -29,7 +30,8 @@ export interface LeaderboardEntry {
   xp: number;
   level: number;
   rank: Rank;
-  overall: number;
+  stars: number;
+  starRatingsCount: number;
 }
 
 export async function getRanking(page = 1, limit = 20): Promise<RankingPage> {

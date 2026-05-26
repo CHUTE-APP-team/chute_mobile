@@ -1,17 +1,13 @@
 import axios from 'axios';
-import { Platform } from 'react-native';
 import { getToken } from './tokenService';
 
 if (!process.env.EXPO_PUBLIC_API_URL) {
   console.warn('[API] EXPO_PUBLIC_API_URL is not defined. Falling back to localhost.');
 }
 
-const BASE_URL =
-  Platform.OS === 'web'
-    ? 'http://localhost:3000'
-    : process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 
-console.log(`[API] baseURL: ${BASE_URL} (platform: ${Platform.OS})`);
+console.log(`[API] baseURL: ${BASE_URL}`);
 
 export const api = axios.create({
   baseURL: BASE_URL,

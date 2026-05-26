@@ -144,7 +144,7 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.statsRow}>
-          <StatBox label="Overall" value={String(stats?.overall ?? user.overall)} />
+          <StatBox label="Estrelas" value={`${stats?.stars ?? user.stars ?? 3}★`} />
           <StatBox label="Level"   value={String(user.level)}   />
           <StatBox label="XP"      value={String(user.xp)}      />
         </View>

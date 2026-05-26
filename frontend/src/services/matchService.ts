@@ -32,7 +32,8 @@ export interface MatchDetail extends Omit<Match, 'players'> {
 
 export interface CreateMatchData {
   title: string;
-  location: string;
+  location?: string;
+  courtId?: string;
   date: string;
   maxPlayers: number;
 }
