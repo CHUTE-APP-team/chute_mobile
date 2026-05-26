@@ -1,22 +1,22 @@
 import { Types } from 'mongoose';
 import { ITeam } from '../models/Match';
 
-interface PlayerWithOverall {
+interface PlayerWithStars {
   _id: Types.ObjectId;
-  overall: number;
+  stars: number;
 }
 
 /**
  * Generates 2 balanced teams using a snake draft.
  *
  * Algorithm:
- *   1. Sort players by overall DESC
+ *   1. Sort players by stars DESC
  *   2. Alternate assignment A, B, B, A, A, B, B, A … (snake draft)
- *      → minimises the overall gap between teams without complex math
- *   3. Calculate totalOverall for each team
+ *      → minimises the stars gap between teams without complex math
+ *   3. Calculate totalOverall (sum of stars) for each team
  */
-export function generateBalancedTeams(players: PlayerWithOverall[]): [ITeam, ITeam] {
-  const sorted = [...players].sort((a, b) => b.overall - a.overall);
+export function generateBalancedTeams(players: PlayerWithStars[]): [ITeam, ITeam] {
+  const sorted = [...players].sort((a, b) => b.stars - a.stars);
 
   const teamA: Types.ObjectId[] = [];
   const teamB: Types.ObjectId[] = [];
@@ -30,10 +30,10 @@ export function generateBalancedTeams(players: PlayerWithOverall[]): [ITeam, ITe
 
     if (pickA) {
       teamA.push(player._id);
-      totalA += player.overall;
+      totalA += player.stars;
     } else {
       teamB.push(player._id);
-      totalB += player.overall;
+      totalB += player.stars;
     }
   });
 

@@ -134,8 +134,8 @@ export const getRanking = async (
     const skip  = (page - 1) * limit;
 
     const players = await User.find()
-      .select('name overall averageRating totalMatches xp level rank')
-      .sort({ overall: -1, averageRating: -1, totalMatches: -1 })
+      .select('name stars starRatingsCount averageRating totalMatches xp level rank')
+      .sort({ stars: -1, averageRating: -1, totalMatches: -1 })
       .skip(skip)
       .limit(limit)
       .lean();
@@ -143,15 +143,16 @@ export const getRanking = async (
     const total = await User.countDocuments();
 
     const ranking = players.map((player, index) => ({
-      position:      skip + index + 1,
-      _id:           player._id,
-      name:          player.name,
-      overall:       player.overall       ?? 70,
-      averageRating: player.averageRating ?? 0,
-      totalMatches:  player.totalMatches  ?? 0,
-      xp:            player.xp            ?? 0,
-      level:         player.level         ?? 1,
-      rank:          player.rank          ?? 'Bronze',
+      position:         skip + index + 1,
+      _id:              player._id,
+      name:             player.name,
+      stars:            player.stars            ?? 3,
+      starRatingsCount: player.starRatingsCount ?? 0,
+      averageRating:    player.averageRating    ?? 0,
+      totalMatches:     player.totalMatches     ?? 0,
+      xp:               player.xp               ?? 0,
+      level:            player.level             ?? 1,
+      rank:             player.rank              ?? 'Bronze',
     }));
 
     sendSuccess(res, 'Ranking retrieved', {
@@ -176,20 +177,21 @@ export const getPlayerStats = async (
 ): Promise<void> => {
   try {
     const user = await User.findById(req.params.id)
-      .select('name overall averageRating totalMatches xp level rank')
+      .select('name stars starRatingsCount averageRating totalMatches xp level rank')
       .lean();
 
     if (!user) throw new AppError('User not found', 404);
 
     sendSuccess(res, 'Player stats retrieved', {
-      _id:           user._id,
-      name:          user.name,
-      overall:       user.overall       ?? 70,
-      averageRating: user.averageRating ?? 0,
-      totalMatches:  user.totalMatches  ?? 0,
-      xp:            user.xp            ?? 0,
-      level:         user.level         ?? 1,
-      rank:          user.rank          ?? 'Bronze',
+      _id:              user._id,
+      name:             user.name,
+      stars:            user.stars            ?? 3,
+      starRatingsCount: user.starRatingsCount ?? 0,
+      averageRating:    user.averageRating    ?? 0,
+      totalMatches:     user.totalMatches     ?? 0,
+      xp:               user.xp               ?? 0,
+      level:            user.level             ?? 1,
+      rank:             user.rank              ?? 'Bronze',
     });
   } catch (err) {
     next(err);
@@ -207,19 +209,20 @@ export const getLeaderboard = async (
 ): Promise<void> => {
   try {
     const players = await User.find()
-      .select('name xp level rank overall')
+      .select('name xp level rank stars starRatingsCount')
       .sort({ xp: -1, level: -1 })
       .limit(LEADERBOARD_LIMIT)
       .lean();
 
     const leaderboard = players.map((player, index) => ({
-      position: index + 1,
-      _id:      player._id,
-      name:     player.name,
-      xp:       player.xp   ?? 0,
-      level:    player.level ?? 1,
-      rank:     player.rank  ?? 'Bronze',
-      overall:  player.overall ?? 70,
+      position:         index + 1,
+      _id:              player._id,
+      name:             player.name,
+      xp:               player.xp               ?? 0,
+      level:            player.level             ?? 1,
+      rank:             player.rank              ?? 'Bronze',
+      stars:            player.stars             ?? 3,
+      starRatingsCount: player.starRatingsCount  ?? 0,
     }));
 
     sendSuccess(res, 'Leaderboard retrieved', leaderboard);

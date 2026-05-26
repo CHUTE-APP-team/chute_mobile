@@ -11,7 +11,9 @@ export interface IUser extends Document {
   email: string;
   password: string;
   role: UserRole;
-  overall: number;
+  stars: number;
+  starRatingsCount: number;
+  starRatingsSum: number;
   xp: number;
   level: number;
   rank: Rank;
@@ -46,11 +48,19 @@ const UserSchema: Schema = new Schema<IUser>(
       enum: USER_ROLES,
       default: 'player',
     },
-    overall: {
+    stars: {
       type: Number,
-      default: 70,
       min: 1,
-      max: 99,
+      max: 5,
+      default: 3,
+    },
+    starRatingsCount: {
+      type: Number,
+      default: 0,
+    },
+    starRatingsSum: {
+      type: Number,
+      default: 0,
     },
     xp: {
       type: Number,

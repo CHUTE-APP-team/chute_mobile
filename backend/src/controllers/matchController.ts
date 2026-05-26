@@ -18,6 +18,7 @@ import { Types } from 'mongoose';
 import { AuthRequest } from '../middlewares/authMiddleware';
 import Match from '../models/Match';
 import User from '../models/User';
+import Court from '../models/Court';
 import { AppError } from '../utils/AppError';
 import { sendSuccess } from '../utils/response';
 import { parseODataQuery } from '../utils/odataQueryParser';
@@ -34,10 +35,25 @@ export async function createMatch(
   next: NextFunction
 ): Promise<void> {
   try {
-    const { title, location, date, maxPlayers } = req.body;
+    const { title, location, date, maxPlayers, courtId } = req.body;
+
+    let matchLocation = location ?? '';
+    let courtRef = null;
+    let matchModality = 'futsal';
+
+    if (courtId) {
+      const court = await Court.findById(courtId);
+      if (!court) return next(new AppError('Quadra não encontrada', 404));
+      matchLocation = `${court.name} — ${court.address}`;
+      courtRef = court._id;
+      matchModality = court.modality;
+    }
+
     const match = await Match.create({
       title,
-      location,
+      location: matchLocation,
+      court: courtRef,
+      modality: matchModality,
       date,
       maxPlayers,
       players: [req.userId],
@@ -134,10 +150,10 @@ export async function joinMatch(
     if (shouldAutoGenerateTeams(match.players.length, MIN_PLAYERS_FOR_TEAMS)) {
       const playersWithOverall = await User.find(
         { _id: { $in: match.players } },
-        { _id: 1, overall: 1 }
+        { _id: 1, stars: 1 }
       ).lean();
 
-      const [teamA, teamB] = generateBalancedTeams(playersWithOverall as { _id: Types.ObjectId; overall: number }[]);
+      const [teamA, teamB] = generateBalancedTeams(playersWithOverall as { _id: Types.ObjectId; stars: number }[]);
       match.teams = [teamA, teamB];
       match.teamsGeneratedAt = new Date();
     }
@@ -145,8 +161,8 @@ export async function joinMatch(
     await match.save();
 
     const populated = await Match.findById(match._id)
-      .populate('players', 'name overall')
-      .populate('teams.players', 'name overall');
+      .populate('players', 'name stars')
+      .populate('teams.players', 'name stars');
 
     sendSuccess(res, 'Joined match', populated);
   } catch (err) {
@@ -179,16 +195,16 @@ export async function generateMatchTeams(
 
     const playersWithOverall = await User.find(
       { _id: { $in: match.players } },
-      { _id: 1, overall: 1 }
+      { _id: 1, stars: 1 }
     ).lean();
 
-    const [teamA, teamB] = generateBalancedTeams(playersWithOverall as { _id: Types.ObjectId; overall: number }[]);
+    const [teamA, teamB] = generateBalancedTeams(playersWithOverall as { _id: Types.ObjectId; stars: number }[]);
     match.teams = [teamA, teamB];
     match.teamsGeneratedAt = new Date();
     await match.save();
 
     const populated = await Match.findById(match._id)
-      .populate('teams.players', 'name overall');
+      .populate('teams.players', 'name stars');
 
     sendSuccess(res, 'Times gerados com sucesso', { teams: populated!.teams });
   } catch (err) {
@@ -217,26 +233,26 @@ export async function drawTeams(
       throw new AppError('At least 2 players are required to draw teams', 400);
     }
 
-    const playersWithOverall = await User.find(
+    const playersWithStars = await User.find(
       { _id: { $in: match.players } },
-      { _id: 1, name: 1, overall: 1 }
-    ).lean() as { _id: Types.ObjectId; name: string; overall: number }[];
+      { _id: 1, name: 1, stars: 1 }
+    ).lean() as { _id: Types.ObjectId; name: string; stars: number }[];
 
-    const [teamA, teamB] = generateBalancedTeams(playersWithOverall);
+    const [teamA, teamB] = generateBalancedTeams(playersWithStars);
 
     match.teams = [teamA, teamB];
     match.teamsGeneratedAt = new Date();
     await match.save();
 
     // Build response with full player details
-    const playerMap = new Map(playersWithOverall.map((p) => [p._id.toString(), p]));
+    const playerMap = new Map(playersWithStars.map((p) => [p._id.toString(), p]));
 
     const buildDetail = (team: typeof teamA) => ({
       name: team.name,
       totalOverall: team.totalOverall,
       players: team.players.map((id) => {
         const p = playerMap.get(id.toString());
-        return { _id: id, name: p?.name ?? '—', overall: p?.overall ?? 0 };
+        return { _id: id, name: p?.name ?? '—', stars: p?.stars ?? 3 };
       }),
     });
 
@@ -408,8 +424,8 @@ export async function getMatchTeams(
 ): Promise<void> {
   try {
     const match = await Match.findById(req.params.id)
-      .populate('players', 'name overall')
-      .populate('teams.players', 'name overall');
+      .populate('players', 'name stars')
+      .populate('teams.players', 'name stars');
 
     if (!match) throw new AppError('Match not found', 404);
 

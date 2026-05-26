@@ -21,6 +21,8 @@ export interface IPlayerResult {
 export interface IMatch extends Document {
   title: string;
   location: string;
+  court?: Types.ObjectId;
+  modality: 'futsal' | 'society' | 'campo';
   date: Date;
   maxPlayers: number;
   players: Types.ObjectId[];
@@ -56,6 +58,16 @@ const MatchSchema: Schema = new Schema<IMatch>(
       type: String,
       required: [true, 'Location is required'],
       trim: true,
+    },
+    court: {
+      type: Schema.Types.ObjectId,
+      ref: 'Court',
+      default: null,
+    },
+    modality: {
+      type: String,
+      enum: ['futsal', 'society', 'campo'],
+      default: 'futsal',
     },
     date: {
       type: Date,

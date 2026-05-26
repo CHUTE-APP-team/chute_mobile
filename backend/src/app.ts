@@ -6,6 +6,9 @@ import usersRoutes from './routes/usersRoutes';
 import matchRoutes from './routes/matchRoutes';
 import teamRoutes from './routes/teamRoutes';
 import postRoutes from './routes/postRoutes';
+import courtRoutes from './routes/courtRoutes';
+import statSessionRoutes from './routes/statSessionRoutes';
+import miscRoutes from './routes/miscRoutes';
 import { loggerMiddleware } from './middlewares/loggerMiddleware';
 import { errorMiddleware } from './middlewares/errorMiddleware';
 
@@ -31,6 +34,9 @@ app.use('/users', usersRoutes);
 app.use('/matches', matchRoutes);
 app.use('/teams', teamRoutes);
 app.use('/posts', postRoutes);
+app.use('/api/courts', courtRoutes);
+app.use('/api/stat-sessions', statSessionRoutes);
+app.use('/api', miscRoutes);
 
 app.use(errorMiddleware);
 

@@ -98,14 +98,7 @@ export async function recalcPlayerStats(playerId: string): Promise<void> {
     ? Math.round((ratings.reduce((s, r) => s + r, 0) / totalMatches) * 10) / 10
     : 0;
 
-  // overall = averageRating mapped to 1–99 scale
-  // 0 stars → 50 (floor), 10 stars → 99 (ceiling)
-  const overall = totalMatches > 0
-    ? Math.min(99, Math.max(1, Math.round(50 + averageRating * 4.9)))
-    : user.overall;
-
   user.totalMatches  = totalMatches;
   user.averageRating = averageRating;
-  user.overall       = overall;
   await user.save();
 }
