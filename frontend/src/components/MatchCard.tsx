@@ -192,7 +192,7 @@ export default function MatchCard({ match, userId, onJoin }: Props) {
               style={[
                 styles.buttonText,
                 variant === "joined" && styles.buttonTextJoined,
-                (variant === "full" || variant === "joining") &&
+                (variant === "full" || (variant as ButtonVariant) === "joining") &&
                   styles.buttonTextDisabled,
               ]}
             >
