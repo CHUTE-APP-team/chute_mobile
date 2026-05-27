@@ -180,11 +180,7 @@ export default function CourtsScreen() {
       </View>
 
       {/* Filter chips */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterRow}
-      >
+      <View style={styles.filterRow}>
         {FILTERS.map((f) => (
           <TouchableOpacity
             key={f.key}
@@ -196,7 +192,7 @@ export default function CourtsScreen() {
             </Text>
           </TouchableOpacity>
         ))}
-      </ScrollView>
+      </View>
 
       {/* List */}
       {loading ? (
@@ -304,14 +300,15 @@ const styles = StyleSheet.create({
   addBtn: { backgroundColor: colors.primary, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
   addBtnText: { color: '#fff', fontWeight: '600', fontSize: 13 },
 
-  filterRow: { paddingHorizontal: 16, paddingVertical: 8, gap: 8 },
+  filterRow: { paddingHorizontal: 16, paddingVertical: 8, gap: 8, flexDirection: 'row', flexWrap: 'wrap' },
   filterChip: {
     paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingVertical: 7,
+    borderRadius: 20,
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.border,
+    alignSelf: 'flex-start',
   },
   filterChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   filterChipText: { fontSize: 13, color: colors.textSecondary },

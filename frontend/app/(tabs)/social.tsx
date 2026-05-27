@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -158,20 +158,33 @@ export default function SocialScreen() {
   const [loading, setLoading]     = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   async function fetchPosts(silent = false) {
     if (!silent) setLoading(true);
     try {
       const data = await getPosts();
-      setPosts(data);
+      if (mountedRef.current) setPosts(data);
     } catch {
-      Alert.alert("Erro", "Não foi possível carregar o feed.");
+      if (mountedRef.current) {
+        Alert.alert("Erro", "Não foi possível carregar o feed.");
+      }
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (mountedRef.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }
 
-  useFocusEffect(useCallback(() => { fetchPosts(); }, []));
+  useFocusEffect(useCallback(() => {
+    fetchPosts();
+    return () => { mountedRef.current = false; };
+  }, []));
 
   async function handlePost(content: string) {
     const newPost = await createPost(content);

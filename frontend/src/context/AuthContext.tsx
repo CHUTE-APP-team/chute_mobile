@@ -11,7 +11,7 @@ interface AuthContextData {
   register: (name: string, email: string, password: string, role?: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
-  updateUser: (data: { name?: string; role?: string }) => Promise<void>;
+  updateUser: (data: { name?: string; role?: string; city?: string; state?: string; birthDate?: string; strongFoot?: 'right' | 'left' }) => Promise<void>;
   deleteAccount: () => Promise<void>;
 }
 
@@ -73,7 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(profile);
   }
 
-  async function updateUser(data: { name?: string; role?: string }) {
+  async function updateUser(data: { name?: string; role?: string; city?: string; state?: string; birthDate?: string; strongFoot?: 'right' | 'left' }) {
     const updated = await updateCurrentUser(data);
     setUser(updated);
   }

@@ -23,6 +23,15 @@ import { ALL_ROLES, UserRole } from '@/src/utils/roleUtils';
 
 const theme = colors;
 
+function calcAge(birthDateStr: string): number {
+  const birth = new Date(birthDateStr);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age;
+}
+
 const RANK_CONFIG: Record<Rank, { color: string; icon: string }> = {
   Bronze: { color: '#CD7F32', icon: '🥉' },
   Prata:  { color: '#A8A8A8', icon: '🥈' },
@@ -93,20 +102,39 @@ interface EditModalProps {
   visible: boolean;
   initialName: string;
   initialRole: UserRole;
+  initialCity?: string;
+  initialState?: string;
+  initialBirthDate?: string;
+  initialStrongFoot?: 'right' | 'left';
   email: string;
   onClose: () => void;
-  onSave: (name: string, role: UserRole) => Promise<void>;
+  onSave: (data: {
+    name: string; role: UserRole;
+    city: string; state: string;
+    birthDate: string; strongFoot: 'right' | 'left';
+  }) => Promise<void>;
 }
 
-function EditModal({ visible, initialName, initialRole, email, onClose, onSave }: EditModalProps) {
-  const [name, setName] = useState(initialName);
-  const [role, setRole] = useState<UserRole>(initialRole);
-  const [saving, setSaving] = useState(false);
+function EditModal({
+  visible, initialName, initialRole, initialCity, initialState,
+  initialBirthDate, initialStrongFoot, email, onClose, onSave,
+}: EditModalProps) {
+  const [name,       setName]       = useState(initialName);
+  const [role,       setRole]       = useState<UserRole>(initialRole);
+  const [city,       setCity]       = useState(initialCity ?? '');
+  const [state,      setState]      = useState(initialState ?? '');
+  const [birthDate,  setBirthDate]  = useState(initialBirthDate ?? '');
+  const [strongFoot, setStrongFoot] = useState<'right' | 'left'>(initialStrongFoot ?? 'right');
+  const [saving,     setSaving]     = useState(false);
 
   useEffect(() => {
     if (visible) {
       setName(initialName);
       setRole(initialRole);
+      setCity(initialCity ?? '');
+      setState(initialState ?? '');
+      setBirthDate(initialBirthDate ?? '');
+      setStrongFoot(initialStrongFoot ?? 'right');
     }
   }, [visible]);
 
@@ -117,7 +145,7 @@ function EditModal({ visible, initialName, initialRole, email, onClose, onSave }
     }
     setSaving(true);
     try {
-      await onSave(name.trim(), role);
+      await onSave({ name: name.trim(), role, city, state, birthDate, strongFoot });
       onClose();
     } catch {
       Alert.alert('Erro', 'Não foi possível salvar as alterações. Tente novamente.');
@@ -132,7 +160,7 @@ function EditModal({ visible, initialName, initialRole, email, onClose, onSave }
         style={styles.modalOverlay}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <View style={styles.modalSheet}>
+        <ScrollView style={styles.modalSheet} contentContainerStyle={{ gap: 12, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
           <Text style={styles.modalTitle}>Editar perfil</Text>
 
           <Text style={styles.fieldLabel}>Nome</Text>
@@ -151,6 +179,51 @@ function EditModal({ visible, initialName, initialRole, email, onClose, onSave }
             value={email}
             editable={false}
           />
+
+          <Text style={styles.fieldLabel}>Cidade</Text>
+          <TextInput
+            style={styles.textInput}
+            value={city}
+            onChangeText={setCity}
+            placeholder="Ex: São Paulo"
+            placeholderTextColor={theme.textMuted}
+          />
+
+          <Text style={styles.fieldLabel}>Estado (UF)</Text>
+          <TextInput
+            style={styles.textInput}
+            value={state}
+            onChangeText={(v) => setState(v.toUpperCase().slice(0, 2))}
+            placeholder="Ex: SP"
+            placeholderTextColor={theme.textMuted}
+            maxLength={2}
+            autoCapitalize="characters"
+          />
+
+          <Text style={styles.fieldLabel}>Data de nascimento (AAAA-MM-DD)</Text>
+          <TextInput
+            style={styles.textInput}
+            value={birthDate}
+            onChangeText={setBirthDate}
+            placeholder="Ex: 1998-05-20"
+            placeholderTextColor={theme.textMuted}
+            keyboardType="numbers-and-punctuation"
+          />
+
+          <Text style={styles.fieldLabel}>Perna boa</Text>
+          <View style={styles.footRow}>
+            {(['right', 'left'] as const).map((f) => (
+              <TouchableOpacity
+                key={f}
+                style={[styles.footChip, strongFoot === f && styles.footChipActive]}
+                onPress={() => setStrongFoot(f)}
+              >
+                <Text style={[styles.footChipText, strongFoot === f && styles.footChipTextActive]}>
+                  {f === 'right' ? '🦵 Destro' : '🦵 Canhoto'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
           <Text style={styles.fieldLabel}>Posição / Role</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.roleRow}>
@@ -180,7 +253,7 @@ function EditModal({ visible, initialName, initialRole, email, onClose, onSave }
               }
             </TouchableOpacity>
           </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -266,9 +339,13 @@ export default function ProfileScreen() {
         visible={editVisible}
         initialName={user.name}
         initialRole={user.role as UserRole}
+        initialCity={user.city}
+        initialState={user.state}
+        initialBirthDate={user.birthDate}
+        initialStrongFoot={user.strongFoot}
         email={user.email}
         onClose={() => setEditVisible(false)}
-        onSave={async (name, role) => { await updateUser({ name, role }); }}
+        onSave={async (data) => { await updateUser(data); }}
       />
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -280,6 +357,31 @@ export default function ProfileScreen() {
 
         <Text style={styles.name}>{user.name}</Text>
         <Text style={styles.email}>{user.email}</Text>
+
+        {/* Personal info chips */}
+        <View style={styles.infoChips}>
+          {(user.city || user.state) && (
+            <View style={styles.infoChip}>
+              <Text style={styles.infoChipText}>
+                📍 {[user.city, user.state].filter(Boolean).join(', ')}
+              </Text>
+            </View>
+          )}
+          {user.birthDate && (
+            <View style={styles.infoChip}>
+              <Text style={styles.infoChipText}>
+                🎂 {calcAge(user.birthDate)} anos
+              </Text>
+            </View>
+          )}
+          {user.strongFoot && (
+            <View style={styles.infoChip}>
+              <Text style={styles.infoChipText}>
+                🦵 {user.strongFoot === 'right' ? 'Destro' : 'Canhoto'}
+              </Text>
+            </View>
+          )}
+        </View>
 
         <TouchableOpacity style={styles.editButton} onPress={() => setEditVisible(true)} activeOpacity={0.85}>
           <Text style={styles.editButtonText}>✏️ Editar perfil</Text>
@@ -392,6 +494,14 @@ const styles = StyleSheet.create({
   leaderboardButtonText: { fontSize: 15, fontWeight: '700', color: theme.primary },
   deleteButton: { marginTop: 12, width: '100%', borderRadius: 14, padding: 16, alignItems: 'center' },
   deleteButtonText: { fontSize: 14, fontWeight: '600', color: '#E53E3E' },
+  infoChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginBottom: 8 },
+  infoChip: { backgroundColor: theme.card, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 5, borderWidth: 1, borderColor: theme.border },
+  infoChipText: { fontSize: 13, color: theme.textSecondary, fontWeight: '500' },
+  footRow: { flexDirection: 'row', gap: 10 },
+  footChip: { flex: 1, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: theme.border, backgroundColor: theme.background, alignItems: 'center' },
+  footChipActive: { borderColor: theme.primary, backgroundColor: theme.primary + '22' },
+  footChipText: { fontSize: 14, fontWeight: '600', color: theme.textSecondary },
+  footChipTextActive: { color: theme.primary },
   toast:        { position: 'absolute', top: 72, alignSelf: 'center', backgroundColor: theme.primary, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 24, zIndex: 99 },
   toastText:    { color: theme.textOnPrimary, fontWeight: 'bold', fontSize: 14 },
   // Modal

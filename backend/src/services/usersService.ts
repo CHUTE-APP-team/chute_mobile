@@ -13,6 +13,10 @@ export interface UserProfile {
   rank: Rank;
   averageRating: number;
   totalMatches: number;
+  city?: string;
+  state?: string;
+  birthDate?: string;
+  strongFoot?: 'right' | 'left';
 }
 
 export const getUserById = async (userId: string): Promise<UserProfile> => {
@@ -31,5 +35,9 @@ export const getUserById = async (userId: string): Promise<UserProfile> => {
     rank:             user.rank,
     averageRating:    user.averageRating ?? 0,
     totalMatches:     user.totalMatches  ?? 0,
+    city:             user.city,
+    state:            user.state,
+    birthDate:        user.birthDate ? user.birthDate.toISOString().slice(0, 10) : undefined,
+    strongFoot:       user.strongFoot,
   };
 };

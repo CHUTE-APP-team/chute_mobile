@@ -16,6 +16,10 @@ export interface UserProfile {
   rank: Rank;
   averageRating: number;
   totalMatches: number;
+  city?: string;
+  state?: string;
+  birthDate?: string;
+  strongFoot?: 'right' | 'left';
 }
 
 export interface PlayerStats {
@@ -40,7 +44,11 @@ export async function getPlayerStats(userId: string): Promise<PlayerStats> {
   return response.data.data as PlayerStats;
 }
 
-export async function updateCurrentUser(data: { name?: string; role?: string }): Promise<UserProfile> {
+export async function updateCurrentUser(data: {
+  name?: string; role?: string;
+  city?: string; state?: string;
+  birthDate?: string; strongFoot?: 'right' | 'left';
+}): Promise<UserProfile> {
   const response = await api.put('/users/me', data);
   return response.data.data as UserProfile;
 }

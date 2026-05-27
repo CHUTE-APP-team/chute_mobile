@@ -42,15 +42,25 @@ export const updateMe = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { name, role } = req.body as { name?: string; role?: string };
+    const { name, role, city, state, birthDate, strongFoot } = req.body as {
+      name?: string; role?: string; city?: string; state?: string;
+      birthDate?: string; strongFoot?: string;
+    };
 
     if (role && !USER_ROLES.includes(role as any)) {
       throw new AppError(`Invalid role. Must be one of: ${USER_ROLES.join(', ')}`, 400);
     }
+    if (strongFoot && !['right', 'left'].includes(strongFoot)) {
+      throw new AppError('strongFoot must be "right" or "left"', 400);
+    }
 
-    const updates: Record<string, string> = {};
-    if (name)  updates.name = name.trim();
-    if (role)  updates.role = role;
+    const updates: Record<string, any> = {};
+    if (name)       updates.name       = name.trim();
+    if (role)       updates.role       = role;
+    if (city  !== undefined) updates.city  = city?.trim() || undefined;
+    if (state !== undefined) updates.state = state?.trim() || undefined;
+    if (birthDate)  updates.birthDate  = new Date(birthDate);
+    if (strongFoot) updates.strongFoot = strongFoot;
 
     const user = await User.findByIdAndUpdate(
       req.userId,

@@ -19,6 +19,10 @@ export interface IUser extends Document {
   rank: Rank;
   averageRating: number;
   totalMatches: number;
+  city?: string;
+  state?: string;
+  birthDate?: Date;
+  strongFoot?: 'right' | 'left';
   createdAt: Date;
 }
 
@@ -85,6 +89,10 @@ const UserSchema: Schema = new Schema<IUser>(
       type: Number,
       default: 0,
     },
+    city: { type: String, trim: true },
+    state: { type: String, trim: true },
+    birthDate: { type: Date },
+    strongFoot: { type: String, enum: ['right', 'left'] },
   },
   {
     timestamps: true,

@@ -131,15 +131,12 @@ function RankingRow({
 
       {/* Stars */}
       <View style={[styles.overallBox, isTop3 && { borderColor: top3.border }]}>
-        {[1, 2, 3, 4, 5].map((s) => (
-          <Text
-            key={s}
-            style={{ fontSize: 10, color: (entry.stars ?? 3) >= s ? '#FFB800' : '#CCCCCC', lineHeight: 12 }}
-          >
-            ★
-          </Text>
-        ))}
-        <Text style={styles.overallLabel}>{(entry.stars ?? 3)}★</Text>
+        <View style={styles.starsRow}>
+          {[1, 2, 3, 4, 5].map((s) => (
+            <Text key={s} style={{ fontSize: 11, color: (entry.stars ?? 3) >= s ? '#FFB800' : '#CCCCCC' }}>★</Text>
+          ))}
+        </View>
+        <Text style={styles.overallLabel}>{(entry.stars ?? 3).toFixed(1)}★</Text>
       </View>
     </View>
   );
@@ -366,25 +363,23 @@ const styles = StyleSheet.create({
 
   // ─── Overall box ───────────────────────────────────────────────────
   overallBox: {
-    width: 48,
-    height: 48,
     borderRadius: 10,
     borderWidth: 1.5,
     borderColor: theme.border,
     alignItems: "center",
     justifyContent: "center",
-    gap: 0,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    gap: 2,
   },
-  overallNum: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: theme.text,
-    lineHeight: 22,
+  starsRow: {
+    flexDirection: "row",
+    gap: 1,
   },
   overallLabel: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: "700",
     color: theme.textMuted,
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
 });
