@@ -37,11 +37,12 @@ export async function getPosts(
   next: NextFunction
 ): Promise<void> {
   try {
-    const posts = await Post.find()
+    const posts = (await Post.find()
       .populate('author', 'name')
       .sort({ createdAt: -1 })
       .limit(FEED_LIMIT)
-      .lean();
+      .lean()
+    ).filter((p) => p.author != null);
 
     sendSuccess(res, 'Posts retrieved', posts);
   } catch (err) {

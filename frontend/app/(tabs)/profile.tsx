@@ -14,6 +14,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '@/src/context/AuthContext';
@@ -123,7 +124,8 @@ function EditModal({
   const [role,       setRole]       = useState<UserRole>(initialRole);
   const [city,       setCity]       = useState(initialCity ?? '');
   const [state,      setState]      = useState(initialState ?? '');
-  const [birthDate,  setBirthDate]  = useState(initialBirthDate ?? '');
+  const [birthDate,      setBirthDate]      = useState(initialBirthDate ?? '');
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [strongFoot, setStrongFoot] = useState<'right' | 'left'>(initialStrongFoot ?? 'right');
   const [saving,     setSaving]     = useState(false);
 
@@ -134,6 +136,7 @@ function EditModal({
       setCity(initialCity ?? '');
       setState(initialState ?? '');
       setBirthDate(initialBirthDate ?? '');
+      setShowDatePicker(false);
       setStrongFoot(initialStrongFoot ?? 'right');
     }
   }, [visible]);
@@ -200,15 +203,32 @@ function EditModal({
             autoCapitalize="characters"
           />
 
-          <Text style={styles.fieldLabel}>Data de nascimento (AAAA-MM-DD)</Text>
-          <TextInput
-            style={styles.textInput}
-            value={birthDate}
-            onChangeText={setBirthDate}
-            placeholder="Ex: 1998-05-20"
-            placeholderTextColor={theme.textMuted}
-            keyboardType="numbers-and-punctuation"
-          />
+          <Text style={styles.fieldLabel}>Data de nascimento</Text>
+          <TouchableOpacity
+            style={styles.dateBtn}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Text style={birthDate ? styles.dateBtnText : styles.dateBtnPlaceholder}>
+              {birthDate
+                ? birthDate.split('-').reverse().join('/')
+                : 'DD/MM/AAAA'}
+            </Text>
+            <Text style={styles.dateBtnIcon}>📅</Text>
+          </TouchableOpacity>
+          {showDatePicker && (
+            <DateTimePicker
+              value={birthDate ? new Date(birthDate) : new Date(2000, 0, 1)}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              maximumDate={new Date()}
+              onChange={(e: DateTimePickerEvent, date?: Date) => {
+                setShowDatePicker(Platform.OS === 'ios');
+                if (e.type === 'set' && date) {
+                  setBirthDate(date.toISOString().slice(0, 10));
+                }
+              }}
+            />
+          )}
 
           <Text style={styles.fieldLabel}>Perna boa</Text>
           <View style={styles.footRow}>
@@ -497,6 +517,10 @@ const styles = StyleSheet.create({
   infoChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginBottom: 8 },
   infoChip: { backgroundColor: theme.card, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 5, borderWidth: 1, borderColor: theme.border },
   infoChipText: { fontSize: 13, color: theme.textSecondary, fontWeight: '500' },
+  dateBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: theme.background, borderWidth: 1, borderColor: theme.border, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 13 },
+  dateBtnText: { fontSize: 16, color: theme.text },
+  dateBtnPlaceholder: { fontSize: 16, color: theme.textMuted },
+  dateBtnIcon: { fontSize: 18 },
   footRow: { flexDirection: 'row', gap: 10 },
   footChip: { flex: 1, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: theme.border, backgroundColor: theme.background, alignItems: 'center' },
   footChipActive: { borderColor: theme.primary, backgroundColor: theme.primary + '22' },

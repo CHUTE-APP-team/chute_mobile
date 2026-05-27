@@ -44,9 +44,11 @@ interface PostCardProps {
 }
 
 function PostCard({ post, currentUserId, onLike, onDelete }: PostCardProps) {
+  const authorName = post.author?.name ?? "Usuário removido";
+  const authorId   = post.author?._id ?? "";
   const isLiked    = currentUserId ? post.likes.includes(currentUserId) : false;
-  const isAuthor   = currentUserId === post.author._id;
-  const initials   = post.author.name.charAt(0).toUpperCase();
+  const isAuthor   = currentUserId === authorId;
+  const initials   = authorName.charAt(0).toUpperCase();
 
   return (
     <View style={styles.card}>
@@ -55,7 +57,7 @@ function PostCard({ post, currentUserId, onLike, onDelete }: PostCardProps) {
           <Text style={styles.avatarText}>{initials}</Text>
         </View>
         <View style={styles.authorBlock}>
-          <Text style={styles.authorName}>{post.author.name}</Text>
+          <Text style={styles.authorName}>{authorName}</Text>
           <Text style={styles.timestamp}>{relativeTime(post.createdAt)}</Text>
         </View>
         {isAuthor && (

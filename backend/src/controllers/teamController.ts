@@ -14,12 +14,16 @@ export async function createTeam(
   next: NextFunction
 ): Promise<void> {
   try {
-    const { name, description } = req.body;
+    const { name, description, city, state, emblemShape, emblemColor } = req.body;
     if (!name?.trim()) throw new AppError('Team name is required', 400);
 
     const team = await TeamGroup.create({
       name: name.trim(),
       description: description?.trim() ?? '',
+      city:  city?.trim(),
+      state: state?.trim(),
+      emblemShape: emblemShape ?? 'shield',
+      emblemColor: emblemColor ?? '#FF6A00',
       createdBy: req.userId,
       members: [req.userId],
     });
@@ -92,9 +96,13 @@ export async function updateTeam(
       throw new AppError('Only the team creator can edit it', 403);
     }
 
-    const { name, description } = req.body;
-    if (name)        team.name        = name.trim();
+    const { name, description, city, state, emblemShape, emblemColor } = req.body;
+    if (name)                      team.name        = name.trim();
     if (description !== undefined) team.description = description.trim();
+    if (city  !== undefined)       team.city        = city?.trim();
+    if (state !== undefined)       team.state       = state?.trim();
+    if (emblemShape)               team.emblemShape = emblemShape;
+    if (emblemColor)               team.emblemColor = emblemColor;
 
     await team.save();
 

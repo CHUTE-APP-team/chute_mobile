@@ -9,10 +9,16 @@ export interface TeamMember {
   rank?: string;
 }
 
+export type EmblemShape = 'shield' | 'circle' | 'star';
+
 export interface Team {
   _id: string;
   name: string;
   description: string;
+  city?: string;
+  state?: string;
+  emblemShape: EmblemShape;
+  emblemColor: string;
   createdBy: TeamMember;
   members: TeamMember[];
   createdAt: string;
@@ -28,12 +34,20 @@ export async function getTeam(id: string): Promise<Team> {
   return res.data.data as Team;
 }
 
-export async function createTeam(data: { name: string; description?: string }): Promise<Team> {
+export async function createTeam(data: {
+  name: string; description?: string;
+  city?: string; state?: string;
+  emblemShape?: EmblemShape; emblemColor?: string;
+}): Promise<Team> {
   const res = await api.post('/teams', data);
   return res.data.data as Team;
 }
 
-export async function updateTeam(id: string, data: { name?: string; description?: string }): Promise<Team> {
+export async function updateTeam(id: string, data: {
+  name?: string; description?: string;
+  city?: string; state?: string;
+  emblemShape?: EmblemShape; emblemColor?: string;
+}): Promise<Team> {
   const res = await api.put(`/teams/${id}`, data);
   return res.data.data as Team;
 }

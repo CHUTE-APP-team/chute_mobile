@@ -3,6 +3,10 @@ import mongoose, { Document, Schema, Types } from 'mongoose';
 export interface ITeamGroup extends Document {
   name: string;
   description?: string;
+  city?: string;
+  state?: string;
+  emblemShape: 'shield' | 'circle' | 'star';
+  emblemColor: string;
   createdBy: Types.ObjectId;
   members: Types.ObjectId[];
   createdAt: Date;
@@ -21,6 +25,10 @@ const TeamGroupSchema: Schema = new Schema<ITeamGroup>(
       trim: true,
       default: '',
     },
+    city:  { type: String, trim: true },
+    state: { type: String, trim: true },
+    emblemShape: { type: String, enum: ['shield', 'circle', 'star'], default: 'shield' },
+    emblemColor: { type: String, default: '#FF6A00' },
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',
