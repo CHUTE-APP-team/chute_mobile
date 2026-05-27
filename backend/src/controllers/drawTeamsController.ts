@@ -5,10 +5,27 @@ import { sendSuccess } from '../utils/response'
 interface DrawPlayer { name: string; stars: number }
 interface DrawnTeam  { name: string; players: DrawPlayer[]; totalStars: number; avgStars: number }
 
+function shuffle<T>(arr: T[]): T[] {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]]
+  }
+  return arr
+}
+
 function snakeDraft(players: DrawPlayer[], teamSize: number): DrawnTeam[] {
   if (players.length < 2) throw new AppError('Mínimo 2 jogadores', 400)
   const numTeams = Math.ceil(players.length / teamSize)
-  const sorted = [...players].sort((a, b) => b.stars - a.stars)
+  // Group by stars, shuffle within each group, then sort descending to keep balance
+  const grouped = new Map<number, DrawPlayer[]>()
+  for (const p of players) {
+    if (!grouped.has(p.stars)) grouped.set(p.stars, [])
+    grouped.get(p.stars)!.push(p)
+  }
+  for (const [, group] of grouped) shuffle(group)
+  // Rebuild sorted array from shuffled groups so same-star players appear in random order
+  const starLevels = Array.from(grouped.keys()).sort((a, b) => b - a)
+  const sorted: DrawPlayer[] = starLevels.flatMap((star) => grouped.get(star)!)
   const teams: DrawPlayer[][] = Array.from({ length: numTeams }, () => [])
   let round = 0, idx = 0
   while (idx < sorted.length) {

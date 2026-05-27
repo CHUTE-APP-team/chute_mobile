@@ -1,4 +1,6 @@
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import React, { useEffect, useState } from 'react'
+import { router } from 'expo-router'
 import {
   ActivityIndicator,
   Alert,
@@ -20,6 +22,7 @@ import {
 } from '../src/services/drawService'
 import { colors } from '../src/theme/colors'
 
+const STORAGE_KEY = '@draw_teams_players'
 const TEAM_SIZES = [3, 4, 5, 6, 7]
 
 const TEAM_COLORS: { bg: string; border: string; text: string }[] = [
@@ -44,14 +47,30 @@ function StarPicker({
   onChange: (v: number) => void
 }) {
   return (
-    <View style={{ flexDirection: 'row', gap: 2 }}>
+    <View style={{ flexDirection: 'row', gap: 4 }}>
       {[1, 2, 3, 4, 5].map((s) => (
-        <TouchableOpacity key={s} onPress={() => onChange(s)} hitSlop={6}>
-          <Text style={{ fontSize: 18, color: s <= value ? '#F5B800' : colors.border }}>★</Text>
+        <TouchableOpacity key={s} onPress={() => onChange(s)} hitSlop={10}>
+          <Text style={{ fontSize: 28, color: s <= value ? '#F5B800' : colors.border }}>★</Text>
         </TouchableOpacity>
       ))}
     </View>
   )
+}
+
+async function savePlayers(players: PlayerEntry[]) {
+  try {
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(players))
+  } catch {}
+}
+
+async function loadPlayers(): Promise<PlayerEntry[]> {
+  try {
+    const raw = await AsyncStorage.getItem(STORAGE_KEY)
+    if (!raw) return []
+    return JSON.parse(raw) as PlayerEntry[]
+  } catch {
+    return []
+  }
 }
 
 export default function DrawTeamsScreen() {
@@ -68,6 +87,13 @@ export default function DrawTeamsScreen() {
   const [importTeamId, setImportTeamId] = useState<string | null>(null)
   const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set())
 
+  // Load persisted players on mount
+  useEffect(() => {
+    loadPlayers().then((saved) => {
+      if (saved.length > 0) setPlayers(saved)
+    })
+  }, [])
+
   useEffect(() => {
     if (importVisible) {
       setLoadingTeams(true)
@@ -81,23 +107,39 @@ export default function DrawTeamsScreen() {
     }
   }, [importVisible])
 
+  function updatePlayers(next: PlayerEntry[]) {
+    setPlayers(next)
+    savePlayers(next)
+  }
+
   function addPlayer() {
     const name = newName.trim()
     if (!name) return
-    setPlayers((prev) => [...prev, { id: genId(), name, stars: 3 }])
+    updatePlayers([...players, { id: genId(), name, stars: 3 }])
     setNewName('')
   }
 
   function removePlayer(id: string) {
-    setPlayers((prev) => prev.filter((p) => p.id !== id))
+    updatePlayers(players.filter((p) => p.id !== id))
   }
 
   function setStars(id: string, stars: number) {
-    setPlayers((prev) => prev.map((p) => (p.id === id ? { ...p, stars } : p)))
+    updatePlayers(players.map((p) => (p.id === id ? { ...p, stars } : p)))
   }
 
   function setName(id: string, name: string) {
-    setPlayers((prev) => prev.map((p) => (p.id === id ? { ...p, name } : p)))
+    updatePlayers(players.map((p) => (p.id === id ? { ...p, name } : p)))
+  }
+
+  function clearAllPlayers() {
+    Alert.alert(
+      'Limpar lista',
+      'Remover todos os jogadores?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Limpar', style: 'destructive', onPress: () => updatePlayers([]) },
+      ]
+    )
   }
 
   async function handleDraw() {
@@ -136,7 +178,7 @@ export default function DrawTeamsScreen() {
     const toAdd = team.members
       .filter((m) => selectedMembers.has(m._id) && !existingNames.has(m.name.toLowerCase()))
       .map((m) => ({ id: genId(), name: m.name, stars: 3 } as PlayerEntry))
-    setPlayers((prev) => [...prev, ...toAdd])
+    updatePlayers([...players, ...toAdd])
     setSelectedMembers(new Set())
     setImportVisible(false)
   }
@@ -146,7 +188,11 @@ export default function DrawTeamsScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Text style={styles.backBtnText}>← Voltar</Text>
+          </TouchableOpacity>
           <Text style={styles.headerTitle}>Times Sorteados</Text>
+          <View style={{ width: 64 }} />
         </View>
         <ScrollView contentContainerStyle={styles.resultBody}>
           {result.teams.map((team, idx) => {
@@ -175,7 +221,7 @@ export default function DrawTeamsScreen() {
           })}
 
           <TouchableOpacity
-            style={[styles.primaryBtn, { marginTop: 24 }]}
+            style={[styles.primaryBtn, { marginTop: 24 }, drawing && { opacity: 0.6 }]}
             onPress={handleDraw}
             disabled={drawing}
           >
@@ -202,13 +248,23 @@ export default function DrawTeamsScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Sortear Times</Text>
-        <TouchableOpacity
-          style={styles.importBtn}
-          onPress={() => { setSelectedMembers(new Set()); setImportVisible(true) }}
-        >
-          <Text style={styles.importBtnText}>📋 Importar</Text>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Text style={styles.backBtnText}>← Voltar</Text>
         </TouchableOpacity>
+        <Text style={styles.headerTitle}>Sortear Times</Text>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          {players.length > 0 && (
+            <TouchableOpacity style={styles.clearBtn} onPress={clearAllPlayers}>
+              <Text style={styles.clearBtnText}>🗑</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={styles.importBtn}
+            onPress={() => { setSelectedMembers(new Set()); setImportVisible(true) }}
+          >
+            <Text style={styles.importBtnText}>📋 Importar</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.formBody}>
@@ -388,6 +444,17 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   importBtnText: { color: colors.text, fontWeight: '600', fontSize: 13 },
+  backBtn: { padding: 4, minWidth: 64 },
+  backBtnText: { color: colors.primary, fontSize: 14, fontWeight: '600' },
+  clearBtn: {
+    backgroundColor: colors.card,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  clearBtnText: { fontSize: 15 },
 
   formBody: { padding: 20, gap: 8, paddingBottom: 60 },
 
